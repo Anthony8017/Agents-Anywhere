@@ -26,6 +26,7 @@ import Darwin
             attachments: .init(attachmentAPI: api.attachments))
         let paragraph = "这是用于验证静态滚动性能的离线测试内容。页面已经停止输出，所有工具记录默认折叠。正文包含普通中文、English words、数字和常见的标点符号。我们记录实际布局次数，而不是根据代码结构猜测性能。每次对照使用相同的内容与滚动速度，不连接任何服务，也不会发送消息。"
         let code = (0..<18).map { "const item\($0) = await repository.load({ id: \($0), active: true }); // 静态代码测试" }.joined(separator: "\n")
+        let scenario = self.scenario
         messages = (0..<3).map { turn in
             if scenario == "prose" {
                 return (0..<10).map { "第 \(turn + 1) 轮第 \($0 + 1) 段。\(paragraph)" }.joined(separator: "\n\n")
@@ -127,7 +128,7 @@ final class DriverView: UIView {
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(8))
             guard let self, let root = self.view?.window else { return }
-            func descendants(_ view: UIView) -> [UIView] { [view] + view.subviews.flatMap(descendants) }
+            @MainActor func descendants(_ view: UIView) -> [UIView] { [view] + view.subviews.flatMap(descendants) }
             let views = descendants(root)
             self.scroll = views.compactMap { $0 as? UIScrollView }.filter { $0.contentSize.height > $0.bounds.height + 100 }
                 .max { $0.bounds.height < $1.bounds.height }
@@ -193,7 +194,7 @@ final class DriverView: UIView {
     let url = URL.documentsDirectory.appending(path: "static-scroll.jsonl")
     if !FileManager.default.fileExists(atPath: url.path) { FileManager.default.createFile(atPath: url.path, contents: nil) }
     if let file = try? FileHandle(forWritingTo: url) {
-        defer { try? file.close() }; try? file.seekToEnd(); try? file.write(contentsOf: Data((line + "\n").utf8))
+        defer { try? file.close() }; _ = try? file.seekToEnd(); try? file.write(contentsOf: Data((line + "\n").utf8))
     }
 }
 #endif
