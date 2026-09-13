@@ -182,7 +182,7 @@ export class RuntimeServer {
             identity: { runtime: 'dsh', runtimeVersion: '0.1.5-rc.2', bridgeVersion: '0.1.0-dev.0', protocolVersion: '1.0', displayName: 'DeepSeek Harness' },
             storage: { mode: 'dsh-native', sameSessionWriterLimit: 1, crossProcessWriterExclusion: false },
             features: { attachments: Boolean(this.reader.native?.ctx.get('sessionController') && this.reader.native.ctx.get('attachments')),
-              sessionDiscovery: true, timelineSuffixRead: false, approval: false, userQuestions: this.reader.native?.questions.available ?? false,
+              sessionDiscovery: true, timelineSuffixRead: false, approval: this.reader.native?.approvals.available ?? false, userQuestions: this.reader.native?.questions.available ?? false,
               readOnly: !this.reader.native?.ctx.get('sessionController'), snapshotPagination: true, syncMode: this.reader.native ? 'events' : 'polling', projectionVersion: 2 },
           } })
           return

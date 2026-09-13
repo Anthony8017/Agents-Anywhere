@@ -2,22 +2,23 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-gateway'
 import type {} from '@deepseek-ai/dsh-client-connection'
 import type {} from '@deepseek-ai/dsh-user-questions'
+import type {} from '@deepseek-ai/dsh-user-approval'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
 import { record } from './types.js'
 
-export type QuestionOutcome = { kind: 'next' } | { kind: 'result', value: unknown }
+export type InteractionOutcome = { kind: 'next' } | { kind: 'result', value: unknown }
   | { kind: 'rejected', error: { name: string, code: string, message: string } }
 
 /** A local consumer of the official Remote stream, not a replacement answer provider. */
-export class QuestionStream {
+export class InteractionStream {
   private clientId: string | undefined
   private activeContext: Context | undefined
   private dispose: () => Promise<void>
   get available(): boolean { return this.clientId !== undefined }
 
-  constructor(ctx: Context, receive: (frame: Record<string, unknown>) => Promise<void>, changed: () => void) {
-    const scope = ctx.inject(['typertGateway', 'connection', 'userQuestions'], ready => {
+  constructor(ctx: Context, receive: (frame: Record<string, unknown>) => Promise<void>, changed: () => void, service: 'userQuestions' | 'approval' = 'userQuestions') {
+    const scope = ctx.inject(['typertGateway', 'connection', service], ready => {
       const abort = new AbortController()
       const run = async () => {
         while (!abort.signal.aborted) {
@@ -38,14 +39,14 @@ export class QuestionStream {
       ready.effect(() => {
         const task = run()
         return async () => { abort.abort(); await task }
-      }, 'dsh: user question Remote stream')
+      }, 'dsh: interaction Remote stream')
     })
     this.dispose = async () => { await scope.dispose() }
   }
 
-  async reply(eventId: string, outcome: QuestionOutcome): Promise<void> {
+  async reply(eventId: string, outcome: InteractionOutcome): Promise<void> {
     const ctx = this.activeContext, clientId = this.clientId
-    if (!ctx || !clientId) throw new Error('DSH 问答连接暂不可用，请稍后重试。')
+    if (!ctx || !clientId) throw new Error('DSH 交互连接暂不可用，请稍后重试。')
     const rpcId = randomUUID()
     // Public, already-authenticated in-process carrier. No HTTP request leaves the Host.
     const response = await ctx.connection.createSharedFetchHandler('/api').fetch(new Request('http://127.0.0.1/api/$events/result', {
