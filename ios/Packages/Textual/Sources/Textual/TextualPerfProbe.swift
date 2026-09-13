@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// Diagnostic worktree only. Disabled unless the probe launch enables counters.
+/// Opt-in diagnostics. Counters and experiments stay disabled without launch environment flags.
 public enum TextualPerfProbe {
   public static let enabled = ProcessInfo.processInfo.environment["AA_PERF_COUNTERS"] == "1"
   public static let noSelection = ProcessInfo.processInfo.environment["AA_PERF_SELECTION"] == "off"

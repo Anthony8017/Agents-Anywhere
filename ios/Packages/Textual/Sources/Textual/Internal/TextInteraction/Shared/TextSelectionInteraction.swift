@@ -23,19 +23,13 @@ struct TextSelectionInteraction: ViewModifier {
   func body(content: Content) -> some View {
     #if TEXTUAL_ENABLE_TEXT_SELECTION
       if textSelection.allowsSelection && !TextualPerfProbe.noSelection {
-        content
-          .overlayTextLayoutCollection(isActive: !TextualPerfProbe.viewportSelection || probeVisible || model.selectedRange != nil) { layoutCollection in
-            Color.clear
-              .onChange(of: AnyTextLayoutCollection(layoutCollection), initial: true) {
-                model.setCoordinator(coordinator)
-                model.setLayoutCollection(layoutCollection)
-              }
-          }
-          .modifier(PlatformTextSelectionInteraction(model: model))
-          .environment(\.probeNativeSelectionActive, !TextualPerfProbe.viewportNative || probeVisible || model.selectedRange != nil)
-          .onScrollVisibilityChange(threshold: 0.01) { visible in
-            if TextualPerfProbe.viewportSelection || TextualPerfProbe.viewportNative { probeVisible = visible }
-          }
+        if TextualPerfProbe.viewportSelection || TextualPerfProbe.viewportNative {
+          selectionContent(content)
+            .environment(\.probeNativeSelectionActive, !TextualPerfProbe.viewportNative || probeVisible || model.selectedRange != nil)
+            .onScrollVisibilityChange(threshold: 0.01) { probeVisible = $0 }
+        } else {
+          selectionContent(content)
+        }
       } else {
         content
       }
@@ -43,6 +37,20 @@ struct TextSelectionInteraction: ViewModifier {
       content
     #endif
   }
+
+  #if TEXTUAL_ENABLE_TEXT_SELECTION
+    private func selectionContent(_ content: Content) -> some View {
+      content
+        .overlayTextLayoutCollection(isActive: !TextualPerfProbe.viewportSelection || probeVisible || model.selectedRange != nil) { layoutCollection in
+          Color.clear
+            .onChange(of: AnyTextLayoutCollection(layoutCollection), initial: true) {
+              model.setCoordinator(coordinator)
+              model.setLayoutCollection(layoutCollection)
+            }
+        }
+        .modifier(PlatformTextSelectionInteraction(model: model))
+    }
+  #endif
 }
 
 #if TEXTUAL_ENABLE_TEXT_SELECTION

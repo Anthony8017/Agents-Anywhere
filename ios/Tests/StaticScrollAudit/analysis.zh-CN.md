@@ -2,7 +2,7 @@
 
 2026-09-13。被调查的代码基线为 `cee18a69`，包含此前 Markdown 异步解析、静态字形绘制、附件缓存和命中测试优化。用户反馈：真机 iPhone 17，工具全部折叠，几千字、没有输出时滚动明显卡顿；Xcode 运行和 TestFlight / App Store 安装方式均有问题。
 
-本分支是诊断分支，不是可直接合并的修复。它使用独立 bundle ID `com.agentsanywhere.scrollprobe`，替换应用入口展示合成离线内容。没有修改原工作区，没有安装到真机。
+本报告记录诊断实验，不是已完成的性能修复。采集时使用独立 bundle ID `com.agentsanywhere.scrollprobe`，替换应用入口展示合成离线内容；没有修改原工作区，没有安装到真机。用户要求合入本地主线后，诊断入口已改为显式启用，普通 Xcode Debug / Release 构建保留真实应用入口；实验性的可见性监听也只在对应开关开启时注册。
 
 ## 已确认的结论
 
@@ -106,7 +106,7 @@ GraphHost.flushTransactions
 
 ## 复现诊断
 
-本诊断分支的 Xcode app target 单独启用 `STATIC_SCROLL_PROBE`。不要用全局 `SWIFT_ACTIVE_COMPILATION_CONDITIONS` 覆盖依赖包定义。
+普通 Xcode 构建不启用诊断入口。复现时设置 `AA_STATIC_SCROLL_PROBE_CONDITION=STATIC_SCROLL_PROBE`，只向 app target 添加编译条件。不要用全局 `SWIFT_ACTIVE_COMPILATION_CONDITIONS` 覆盖依赖包定义。本文原始测量对应 `a4365c90`；后续按需启用的整理没有重新采集这 25 组数据。
 
 ```sh
 export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
@@ -114,6 +114,7 @@ xcodebuild -project 'ios/Agents Anywhere/Agents Anywhere.xcodeproj' \
   -scheme 'Agents Anywhere' -configuration Release -sdk iphonesimulator \
   -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/aa-scroll-build \
   CODE_SIGNING_ALLOWED=NO PRODUCT_BUNDLE_IDENTIFIER=com.agentsanywhere.scrollprobe \
+  AA_STATIC_SCROLL_PROBE_CONDITION=STATIC_SCROLL_PROBE \
   ONLY_ACTIVE_ARCH=YES ARCHS=arm64 build
 xcrun simctl install booted '/tmp/aa-scroll-build/Build/Products/Release-iphonesimulator/Agents Anywhere.app'
 python3 ios/scripts/probe-static-scroll.py
