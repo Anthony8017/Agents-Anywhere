@@ -114,7 +114,7 @@ export class SourceConnector implements ConnectorProcess {
     this.failure = null
     this.buffer = ''
     this.updateState({ running: false, authFailed: false })
-    this.logs.setSecrets([binding.connectorToken])
+    await this.logs.startSession([binding.connectorToken])
     this.logs.record('starting')
     const executable = await resolveUv(this.config, settings)
     const pypiIndexUrl = settings.uvPypiIndexUrl || 'https://pypi.org/simple'

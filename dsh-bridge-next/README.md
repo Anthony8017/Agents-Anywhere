@@ -35,7 +35,7 @@ DSH 左侧边栏「设置」上方 → 手机连接 → 云端登录或连接自
 
 已安装 AA Desktop 时连接功能仍显示原占位页，桥接日志始终可用，管理权限不自动切换。手机连接复用已有 `/auth/mobile-login/qr`、`status`、`confirm` 接口；二维码包含手机扫描协议要求的临时登录凭据，使用当前账号的后端地址，不使用 DSH 地址或 OAuth Web 开发端口。无需新增 AA Server 接口。
 
-插件基于 DSH `0.1.5-rc.1`，支持附件和模型/effort/权限、Agent 模式配置。Runtime 提供 DSH 一键配置、官方侧栏过滤、原生会话和历史读取、首次完整校准、归档同步、实时事件、文本、图片和普通文件新建/续聊、中断及 `ask_user_question`。新建使用 AA 显式传入的模型和权限选择；已有会话可切换配置。AA 发来的 PNG/JPEG/WebP/GIF 使用图片接口，普通文件通过本机暂存文件和官方 `fileUploads.uploadStream` 上传，RPC 只传文件元数据。平台发出的附件保留 AA 文件引用；不回传 DSH 本地产生的附件。首次会话清单成功提交到平台之前，runtime 保持初始化状态；同步中断时自动重试。
+插件基于 DSH `0.1.5-rc.2`，支持附件和模型/effort/权限、Agent 模式配置。Runtime 提供 DSH 一键配置、官方侧栏过滤、原生会话和历史读取、首次完整校准、归档同步、实时事件、文本、图片和普通文件新建/续聊、中断及 `ask_user_question`。新建使用 AA 显式传入的模型和权限选择；已有会话可切换配置。AA 发来的 PNG/JPEG/WebP/GIF 使用图片接口，普通文件通过本机暂存文件和官方 `fileUploads.uploadStream` 上传，RPC 只传文件元数据。平台发出的附件保留 AA 文件引用；不回传 DSH 本地产生的附件。首次会话清单成功提交到平台之前，runtime 保持初始化状态；同步中断时自动重试。
 
 实机日志定位到官方历史读取器拒绝一个序号不连续的会话，进而拖断整个同步流。当前通过 `ctx.sessionQuery` 读取，按会话隔离读取失败，保留 AA 已接收的历史，并允许后续刷新重试。图片及配置恢复后，包含坏历史的完整回传测试继续通过。桥接日志页、Python 启动互斥、ID 历史和 Desktop 安装信息职责调整保留；检查与实机状态见 [验证记录](./VERIFICATION.md)。
 
@@ -56,7 +56,7 @@ cd /Users/t4wefan/code/github/Agents-Anywhere/dsh-bridge-next
 corepack yarn install
 corepack yarn check
 
-DSH_HOME="$HOME/.dsh" npx -y -p @deepseek-ai/dsh@0.1.2-rc.1 \
+DSH_HOME="$HOME/.dsh" npx -y -p @deepseek-ai/dsh@0.1.5-rc.2 \
   dsh plugin --profile desktop add "link:$PWD"
 ```
 
@@ -169,7 +169,7 @@ Bridge 的独占锁决定端点文件的写入权。获得锁后会重建残留�
 
 ## 验证范围
 
-自动化覆盖实际 rc.1 Typert Gateway 对编译后 Host 的调用及卸载、OAuth 本地回调和二次跳转、设备复用、取消、重复操作，以及用独立 stdio 测试进程验证 Connector 启停。跨端测试从插件 OAuth 新建开始，经真实共享文件进入 Desktop 首次配对或已删除设备重连，断言只创建一台设备；另覆盖真实 Python CLI/Desktop/插件进程竞争、异常退出后的重试、Desktop 安装信息与 Python ID 写入并发，以及登记失败后保留私有绑定。Web 测试实际挂载页面组件，覆盖 Agent 添加、手机跳过/扫码、二维码过期、权限检查和登录后的路由恢复。
+自动化覆盖实际 rc.2 Typert Gateway 对编译后 Host 的调用及卸载、OAuth 本地回调和二次跳转、设备复用、取消、重复操作，以及用独立 stdio 测试进程验证 Connector 启停。跨端测试从插件 OAuth 新建开始，经真实共享文件进入 Desktop 首次配对或已删除设备重连，断言只创建一台设备；另覆盖真实 Python CLI/Desktop/插件进程竞争、异常退出后的重试、Desktop 安装信息与 Python ID 写入并发，以及登记失败后保留私有绑定。Web 测试实际挂载页面组件，覆盖 Agent 添加、手机跳过/扫码、二维码过期、权限检查和登录后的路由恢复。
 
 本轮没有自动启动真实开发服务、登录真实账号或进行 DSH GUI 联调。首次手动联调时按上面的链路操作，确认 Web 完成页可达；Windows 实机进程行为仍需在对应环境验证。
 
@@ -192,4 +192,4 @@ scripts/               构建、源码复制与产物检查
 tests/                 单元及集成测试
 ```
 
-Host 输出 `lib/index.js`，Client 输出 DSH 模块加载格式的 `lib/client.js`，不能当独立网页打开。目标 Harness 为 `0.1.2-rc.1`；Cordis、Typert 与 Schemastery 使用 Host 提供的 peer 依赖，以免破坏服务类型身份。依赖、构建产物和锁文件遵循仓库现有忽略规则。
+Host 输出 `lib/index.js`，Client 输出 DSH 模块加载格式的 `lib/client.js`，不能当独立网页打开。目标 Harness 为 `0.1.5-rc.2`；Cordis、Typert 与 Schemastery 使用 Host 提供的 peer 依赖，以免破坏服务类型身份。依赖、构建产物和锁文件遵循仓库现有忽略规则。
