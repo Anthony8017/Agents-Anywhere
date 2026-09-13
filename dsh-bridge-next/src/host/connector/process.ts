@@ -114,6 +114,7 @@ export class SourceConnector implements ConnectorProcess {
     this.failure = null
     this.buffer = ''
     this.updateState({ running: false, authFailed: false })
+    this.logs.setSecrets([binding.connectorToken])
     this.logs.record('starting')
     const executable = await resolveUv(this.config, settings)
     const pypiIndexUrl = settings.uvPypiIndexUrl || 'https://pypi.org/simple'
@@ -133,6 +134,7 @@ export class SourceConnector implements ConnectorProcess {
         UV_PROJECT_ENVIRONMENT: join(this.config.stateRoot, 'connector-venv'),
         PYTHONDONTWRITEBYTECODE: '1',
         PYTHONUNBUFFERED: '1',
+        UV_PYTHON_INSTALL_MIRROR: settings.uvPythonInstallMirror || 'https://github.com/astral-sh/python-build-standalone/releases/download',
         UV_DEFAULT_INDEX: pypiIndexUrl,
         UV_INDEX_URL: pypiIndexUrl,
         PIP_INDEX_URL: pypiIndexUrl,
@@ -141,17 +143,18 @@ export class SourceConnector implements ConnectorProcess {
     this.child = child
     child.stdout.setEncoding('utf8')
     child.stdout.on('data', (chunk: string) => { if (this.child === child) this.receive(chunk) })
-    // Always drain stderr (uv may install dependencies); raw subprocess output
-    // can contain credentials, so it is never forwarded to the browser/logs.
-    child.stderr.resume()
+    child.stderr.setEncoding('utf8')
+    child.stderr.on('data', (chunk: string) => { this.logs.output(chunk) })
     child.stdin.on('error', () => { if (this.child === child) this.fail(new Error('Connector 输入连接已关闭。')) })
     child.on('error', () => { if (this.child === child) this.fail(new Error('Connector 进程启动失败，请检查 uv 和源码运行环境。')) })
     child.on('close', (code) => {
       this.closed.add(child)
-      this.logs.record('exited')
+      this.logs.finish()
+      this.logs.record(`exited (${code ?? 'signal'})`)
+      void this.logs.flush().catch(() => undefined)
       if (this.child === child) {
         this.child = null
-        this.fail(new Error(`Connector 已退出（${code ?? '终止'}）。请检查运行环境后重试。`), !this.stopping)
+        this.fail(new Error(`Connector 已退出（${code ?? '终止'}）。请在日志页切换到 Connector 查看原因。`), !this.stopping)
       }
     })
     const abort = () => { void this.stop() }

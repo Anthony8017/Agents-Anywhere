@@ -16,11 +16,6 @@ async function endpointAt(path: string): Promise<Record<string, unknown> | undef
   catch (error) { if (record(error).code === 'ENOENT') return undefined; throw error }
 }
 
-function processExists(pid: unknown): boolean {
-  if (typeof pid !== 'number' || !Number.isSafeInteger(pid) || pid < 1) return false
-  try { process.kill(pid, 0); return true } catch (error) { return record(error).code !== 'ESRCH' }
-}
-
 /** Private loopback transport. Discovery probes can coexist with a Connector connection. */
 export class RuntimeServer {
   private server: Server | undefined
@@ -73,11 +68,8 @@ export class RuntimeServer {
     const endpoint: Endpoint = { version: 1, host: '127.0.0.1', port: address.port, token, pid: process.pid }
     try {
       await mkdir(dirname(this.endpointPath), { recursive: true, mode: 0o700 })
-      const existing = await endpointAt(this.endpointPath)
-      if (existing) {
-        if (processExists(existing.pid)) throw new Error('Another DSH bridge owns this DSH_HOME endpoint')
-        await unlink(this.endpointPath)
-      }
+      // The acquired OS lease is authoritative; descriptors can survive crashes or Host reloads.
+      await unlink(this.endpointPath).catch(error => { if (record(error).code !== 'ENOENT') throw error })
       // Link publishes a complete file atomically and refuses to overwrite a competing owner.
       const temporary = `${this.endpointPath}.${token}.tmp`
       try {
