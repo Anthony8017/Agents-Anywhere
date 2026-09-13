@@ -32,8 +32,9 @@ struct TextSelectionInteraction: ViewModifier {
               }
           }
           .modifier(PlatformTextSelectionInteraction(model: model))
+          .environment(\.probeNativeSelectionActive, !TextualPerfProbe.viewportNative || probeVisible || model.selectedRange != nil)
           .onScrollVisibilityChange(threshold: 0.01) { visible in
-            if TextualPerfProbe.viewportSelection { probeVisible = visible }
+            if TextualPerfProbe.viewportSelection || TextualPerfProbe.viewportNative { probeVisible = visible }
           }
       } else {
         content

@@ -13,6 +13,7 @@
   typealias PlatformTextSelectionInteraction = UIKitTextSelectionInteraction
 
   struct UIKitTextSelectionInteraction: ViewModifier {
+    @Environment(\.probeNativeSelectionActive) private var isActive
     private let model: TextSelectionModel
 
     init(model: TextSelectionModel) {
@@ -21,7 +22,9 @@
 
     func body(content: Content) -> some View {
       content.overlayPreferenceValue(OverflowFrameKey.self) { frames in
-        UIKitTextInteractionOverlay(model: model, overflowFrames: frames)
+        if !TextualPerfProbe.noNativeOverlay && isActive {
+          UIKitTextInteractionOverlay(model: model, overflowFrames: frames)
+        }
       }
     }
   }
