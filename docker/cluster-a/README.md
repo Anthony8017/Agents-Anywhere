@@ -6,8 +6,8 @@ on 192.168.1.35 and accept LAN traffic only. Both workers must share their datab
 Redis, token secret and S3 configuration; instance IDs differ by node.
 
 The six application processes allow at most 60 pooled PostgreSQL connections in
-total (5 persistent + 5 overflow per process), leaving room under the current
-100-connection server limit. Redis requires AOF with appendfsync everysec and
+total (5 persistent + 5 overflow per process), leaving room under the configured
+300-connection server limit. Redis requires AOF with appendfsync everysec and
 maxmemory-policy noeviction because it buffers accepted Timeline writes.
 
 Build one image from a committed release and distribute that exact image to both
@@ -32,3 +32,10 @@ DNS distribution alone does not provide an HTTP health-checking load balancer.
 
 The HTTP port is intended for the separately managed TLS ingress. After ingress
 is ready, restrict direct access to that ingress if required by the deployment.
+
+Before starting Docker services, install worker-access.nft as
+/etc/nftables.d/aa-worker-access.nft and worker-access.service as
+/etc/systemd/system/aa-worker-access.service, then enable it with
+systemctl enable --now aa-worker-access.service. Only 192.168.1.0/24 may
+reach TCP 8000 via eth0; host-local access remains available. These independent
+nftables rules run before Docker DNAT and also block IPv6 ingress to that port.

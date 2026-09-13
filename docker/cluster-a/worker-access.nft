@@ -1,0 +1,10 @@
+# Apply before Docker DNAT; allow only LAN sources to the published HTTP port.
+add table inet aa_worker_access
+flush table inet aa_worker_access
+table inet aa_worker_access {
+    chain ingress {
+        type filter hook prerouting priority -110; policy accept;
+        iifname "eth0" tcp dport 8000 ip saddr 192.168.1.0/24 counter accept
+        iifname "eth0" tcp dport 8000 counter drop
+    }
+}
