@@ -51,3 +51,17 @@ test('stderr framing preserves split unicode and redacts split credentials befor
   assert.doesNotMatch(await readFile(join(root, 'connector-output.json'), 'utf8'), /private-token|\\u001b/)
   assert.doesNotMatch(sanitizeConnectorLine('Authorization: Bearer abc123 https://user:pass@example.test/?token=xyz'), /abc123|user:pass|xyz/)
 })
+
+
+test('starting after factory reset does not republish removed log history', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'connector-reset-'))
+  t.after(() => rm(root, { recursive: true, force: true }))
+  const logs = new ConnectorLogs(root)
+  logs.output('old session\n')
+  await logs.flush()
+  await rm(join(root, 'connector-output.json'))
+  await logs.startSession([])
+  logs.output('new session\n')
+  await logs.flush()
+  assert.deepEqual((await readConnectorLogs(root)).entries.map(entry => entry.text), ['new session'])
+})

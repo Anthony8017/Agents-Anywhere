@@ -56,6 +56,13 @@ export class ConnectorLogs {
     })
   }
   setSecrets(secrets: string[]): void { this.secrets = secrets.filter(Boolean) }
+  async startSession(secrets: string[]): Promise<void> {
+    await this.flush()
+    // Factory reset can remove the journal while this manager remains mounted.
+    this.entries = await entriesAt(this.directory).catch(() => [])
+    this.sequence = Math.max(Date.now() * 1000, this.entries.at(-1)?.id ?? 0)
+    this.setSecrets(secrets)
+  }
   record(event: string): void { this.append(`[process] ${event}`) }
   output(chunk: string): void {
     this.remainder += chunk
@@ -87,9 +94,13 @@ export class ConnectorLogs {
     if (this.timer) { clearTimeout(this.timer); this.timer = undefined }
     await this.ready
     if (this.dirty) {
-      const entries = [...this.entries]
-      this.dirty = false
-      this.writes = this.writes.catch(() => undefined).then(() => writeJson(join(this.directory, filename), entries))
+      this.writes = this.writes.catch(() => undefined).then(async () => {
+        await this.ready
+        if (!this.dirty) return
+        this.dirty = false
+        try { await writeJson(join(this.directory, filename), [...this.entries]) }
+        catch (error) { this.dirty = true; throw error }
+      })
     }
     await this.writes
   }
