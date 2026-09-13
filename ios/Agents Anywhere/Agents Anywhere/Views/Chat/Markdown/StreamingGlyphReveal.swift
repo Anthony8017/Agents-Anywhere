@@ -1,5 +1,6 @@
 import SwiftUI
 import Foundation
+import Textual
 
 extension EnvironmentValues {
     @Entry var streamingGlyphAnimation = false
@@ -60,6 +61,7 @@ nonisolated struct GlyphRevealRenderer: TextRenderer {
     var displayPadding: EdgeInsets { .init(top: 6, leading: 6, bottom: 9, trailing: 6) }
 
     func draw(layout: Text.Layout, in context: inout GraphicsContext) {
+        TextualPerfProbe.hit("glyph.draw")
         let count = layout.reduce(0) { total, line in
             total + line.reduce(0) { $0 + (isRevealed($1) ? $1.count : 0) }
         }

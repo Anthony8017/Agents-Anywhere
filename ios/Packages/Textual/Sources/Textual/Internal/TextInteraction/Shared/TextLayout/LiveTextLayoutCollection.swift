@@ -15,17 +15,23 @@
     private let base: Text.LayoutKey.Value
     private let geometry: GeometryProxy
     private let size: CGSize
+    private let resolvedOrigins: [CGPoint]
 
     init(base: Text.LayoutKey.Value, geometry: GeometryProxy) {
       TextualPerfProbe.hit("layoutCollection.init")
       self.base = base
       self.geometry = geometry
       self.size = geometry.size
+      self.resolvedOrigins = TextualPerfProbe.resolvedEquality ? base.map { geometry[$0.origin] } : []
     }
 
     func isEqual(to other: any TextLayoutCollection) -> Bool {
       TextualPerfProbe.hit("layoutCollection.equal")
       guard let other = other as? LiveTextLayoutCollection else { return false }
+      if TextualPerfProbe.resolvedEquality {
+        return size == other.size && resolvedOrigins == other.resolvedOrigins
+          && base.map(\.layout) == other.base.map(\.layout)
+      }
       return base == other.base && size == other.size
     }
 

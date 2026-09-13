@@ -27,6 +27,7 @@ import Darwin
         let paragraph = "这是用于验证静态滚动性能的离线测试内容。页面已经停止输出，所有工具记录默认折叠。正文包含普通中文、English words、数字和常见的标点符号。我们记录实际布局次数，而不是根据代码结构猜测性能。每次对照使用相同的内容与滚动速度，不连接任何服务，也不会发送消息。"
         let code = (0..<18).map { "const item\($0) = await repository.load({ id: \($0), active: true }); // 静态代码测试" }.joined(separator: "\n")
         let scenario = self.scenario
+        let paused = ProcessInfo.processInfo.environment["AA_PERF_PAUSED_STREAM"] == "1"
         messages = (0..<3).map { turn in
             if scenario == "prose" {
                 return (0..<10).map { "第 \(turn + 1) 轮第 \($0 + 1) 段。\(paragraph)" }.joined(separator: "\n\n")
@@ -54,12 +55,25 @@ import Darwin
             items.append(item("message", role: "assistant", content: ["text": text]))
         }
         chat.timeline.presentOpening(items, pendingMessages: [])
+        if paused, let last = chat.timeline.rows.last {
+            var object = items.last!.raw
+            if case var .object(fields) = object {
+                fields["status"] = .string("running")
+                if case var .object(content) = fields["content"] {
+                    content["text"] = .string(last.text + " ")
+                    fields["content"] = .object(content)
+                }
+                object = .object(fields)
+            }
+            let next = try! JSONDecoder().decode(V2TimelineItem.self, from: JSONEncoder().encode(object))
+            last.flush(next, animate: true, now: ProcessInfo.processInfo.systemUptime)
+        }
         chat.prepareStaticScrollProbe()
         groups = TimelineGrouping.groups(chat.timeline.rows, interactionTargets: [])
         actions = TimelineTurnActions.build(groups: groups, suppressLatest: false)
         report(["event": "fixture", "mode": mode, "scenario": scenario,
             "visibleTextCharacters": messages.reduce(0) { $0 + $1.count }, "items": items.count,
-            "toolsExpanded": false, "streaming": false, "selection": !TextualPerfProbe.noSelection])
+            "toolsExpanded": false, "streaming": paused, "selection": !TextualPerfProbe.noSelection])
     }
 }
 
