@@ -172,3 +172,5 @@ Connector 全量检查有 720 项通过、1 项旧参数签名约束失败；随
 - 全部 148 项测试在 `tsx --test --test-concurrency=4 tests/unit/*.test.ts tests/integration/*.test.ts` 下通过。日志测试包含退出码 2 的 stderr 留存、脱敏、10,000 行保留、200 行分页、重启与恢复出厂设置；审批测试使用官方 rc.2 服务，覆盖单次批准、拒绝、取消、多端作答、重连与计划审批。
 - 默认高并发全量测试曾在不同临时目录之间触发既有的本地端口锁碰撞：一次来自插件 manager 锁，一次来自 Python runtime owner 锁。降低测试并发后全量通过；目录哈希映射端口的实现仍可能误冲突，本次仅修复 Bridge 对残留 PID/损坏 endpoint 文件的误判。
 - Web 与 Desktop 前端未修改。插件自身新增日志来源切换和 Connector 终端日志列表；计划审批沿用现有 inputRequest v1 协议，未新增前端协议或专用页面。
+
+合入最新 main 时，两个 Python 集成探针已适配 Connector 访问令牌新增的 credential_hash 参数。重新构建及产物检查通过；并发 4 时再次出现既有端口锁竞争，随后以 --test-concurrency=1 运行全部 148 项测试通过（0 失败）。
