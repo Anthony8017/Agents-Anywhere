@@ -10,6 +10,7 @@
     }
 
     func materializeContents() -> Contents {
+      TextualPerfProbe.hit("layout.materialize")
       let lineFragments = self.compactMap(\.lineFragment)
       let layoutAttributedStrings =
         lineFragments

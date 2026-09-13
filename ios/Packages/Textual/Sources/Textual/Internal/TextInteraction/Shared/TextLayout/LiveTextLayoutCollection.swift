@@ -17,12 +17,14 @@
     private let size: CGSize
 
     init(base: Text.LayoutKey.Value, geometry: GeometryProxy) {
+      TextualPerfProbe.hit("layoutCollection.init")
       self.base = base
       self.geometry = geometry
       self.size = geometry.size
     }
 
     func isEqual(to other: any TextLayoutCollection) -> Bool {
+      TextualPerfProbe.hit("layoutCollection.equal")
       guard let other = other as? LiveTextLayoutCollection else { return false }
       return base == other.base && size == other.size
     }

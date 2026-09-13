@@ -50,7 +50,8 @@
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
       // Reject offscreen/out-of-bounds overlays before touching text layouts.
-      super.point(inside: point, with: event)
+      TextualPerfProbe.hit("selection.hitTest")
+      return super.point(inside: point, with: event)
         && model.acceptsInteraction(at: point, excluding: exclusionRects)
     }
 

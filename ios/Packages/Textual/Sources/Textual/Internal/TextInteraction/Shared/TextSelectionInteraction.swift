@@ -21,7 +21,7 @@ struct TextSelectionInteraction: ViewModifier {
 
   func body(content: Content) -> some View {
     #if TEXTUAL_ENABLE_TEXT_SELECTION
-      if textSelection.allowsSelection {
+      if textSelection.allowsSelection && !TextualPerfProbe.noSelection {
         content
           .overlayTextLayoutCollection { layoutCollection in
             Color.clear

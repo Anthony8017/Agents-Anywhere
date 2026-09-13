@@ -1,3 +1,4 @@
+#if !STATIC_SCROLL_PROBE
 import SwiftUI
 
 @main
@@ -31,3 +32,5 @@ struct AgentsAnywhereApp: App {
         AppAppearance(rawValue: appearanceValue) ?? .system
     }
 }
+
+#endif

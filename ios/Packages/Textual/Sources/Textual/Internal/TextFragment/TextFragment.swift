@@ -36,6 +36,7 @@ struct TextFragment<Content: AttributedStringProtocol>: View {
   }
 
   var body: some View {
+    let _ = TextualPerfProbe.hit("fragment.body")
     text
       .customAttribute(TextFragmentAttribute())
       .onGeometryChange(for: CGSize?.self, of: \.textContainerSize) { size in

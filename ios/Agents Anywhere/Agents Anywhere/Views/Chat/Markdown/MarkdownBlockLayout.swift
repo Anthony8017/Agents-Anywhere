@@ -1,4 +1,5 @@
 import SwiftUI
+import Textual
 
 /// Measures and places Textual with the same column width in one layout pass.
 /// No geometry callback writes into View state or schedules a second layout.
@@ -32,6 +33,7 @@ struct MarkdownBlockLayout: Layout {
     }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
+        TextualPerfProbe.hit("block.sizeThatFits")
         guard let content = subviews.first else { return .zero }
         let width = proposal.width.flatMap { $0.isFinite ? max(0, $0) : nil }
         let natural = cache.measurements.size(proposedWidth: width) {

@@ -46,6 +46,7 @@
     }
 
     func setLayoutCollection(_ layoutCollection: any TextLayoutCollection) {
+      TextualPerfProbe.hit("selection.setLayout")
       guard !layoutCollection.isEqual(to: self.layoutCollection) else {
         return
       }

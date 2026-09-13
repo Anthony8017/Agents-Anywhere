@@ -12,6 +12,7 @@ struct ChatMarkdownView: View {
     @State private var blocks: [MarkdownBlockSnapshot] = []
 
     var body: some View {
+        let _ = TextualPerfProbe.hit("markdown.body")
         VStack(alignment: .leading, spacing: 16) {
             ForEach(blocks) { block in
                 MarkdownBlockView(block: block, isStreaming: isStreaming, isTail: block.id == blocks.last?.id)
@@ -40,6 +41,7 @@ struct ChatMarkdownView: View {
     }
 
     nonisolated private static func parse(_ request: ParseRequest) throws -> [MarkdownBlockSnapshot] {
+        TextualPerfProbe.hit("markdown.parse")
         try Task.checkCancellation()
         var document = try AttributedStringMarkdownParser.parse(request.text, syntaxExtensions: [.math])
         try Task.checkCancellation()

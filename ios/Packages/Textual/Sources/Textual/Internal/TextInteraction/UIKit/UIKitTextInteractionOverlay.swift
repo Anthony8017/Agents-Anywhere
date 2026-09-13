@@ -28,6 +28,7 @@
     }
 
     func updateUIView(_ uiView: UITextInteractionView, context: Context) {
+      TextualPerfProbe.hit("selection.updateUIView")
       uiView.model = model
       uiView.exclusionRects = overflowFrames
       uiView.openURL = context.environment.openURL

@@ -1,4 +1,5 @@
 import SwiftUI
+import Textual
 
 /// Mounted only for completed turns. Observing file-change payloads here keeps
 /// token appends out of the timeline's structural grouping and earlier footers.
@@ -13,6 +14,7 @@ struct SessionTurnReviewFooter: View {
     var body: some View {
         if !action.changes.isEmpty {
             let windows = root?.range(of: #"^[A-Za-z]:[/\\]|^\\\\"#, options: .regularExpression) != nil
+            let _ = TextualPerfProbe.hit("turnReview.build")
             let review = TimelineTurnReview.build(items: action.changes.map(\.value), root: root, caseInsensitive: windows)
             if !review.files.isEmpty {
                 Button { showsReview = true } label: {

@@ -41,6 +41,7 @@ extension TextFragment {
     }
 
     func sizeChanged(_ size: CGSize, environment: TextEnvironmentValues) {
+      TextualPerfProbe.hit("builder.sizeChanged")
       // Plain text cannot change when the attachment container resizes.
       guard !currentAttachmentSizes.isEmpty else { return }
       let attachmentSizes = content.attachmentSizes(for: .init(size), in: environment)

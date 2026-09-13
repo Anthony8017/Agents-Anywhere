@@ -54,6 +54,7 @@ extension HighlightedTextFragment {
     var highlightedCode: AttributedString?
 
     func tokenize(content: AttributedSubstring, languageHint: String?) async {
+      TextualPerfProbe.hit("highlighter.tokenize")
       let code = String(content.characters[...])
       tokens = [CodeToken(content: code, type: .plain)]
 
@@ -68,6 +69,7 @@ extension HighlightedTextFragment {
       using theme: StructuredText.HighlighterTheme,
       environment: TextEnvironmentValues
     ) {
+      TextualPerfProbe.hit("highlighter.highlight")
       var attributes = AttributeContainer()
       // Re-apply the presentation intent for pasteboard formatters
       attributes.presentationIntent = presentationIntent

@@ -66,6 +66,10 @@ final class SessionChatModel {
             && session.metadata?.cwd?.isEmpty == false
     }
 
+    #if STATIC_SCROLL_PROBE
+    func prepareStaticScrollProbe() { isOpeningPrepared = true }
+    #endif
+
     func prepareOpening() async {
         if !timeline.hasPresentedSnapshot { isOpeningPrepared = false }
         openingError = nil
