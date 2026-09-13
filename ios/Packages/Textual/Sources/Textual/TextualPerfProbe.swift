@@ -9,6 +9,7 @@ public enum TextualPerfProbe {
   public static let viewportSelection = ProcessInfo.processInfo.environment["AA_PERF_VIEWPORT_SELECTION"] == "1"
   public static let noNativeOverlay = ProcessInfo.processInfo.environment["AA_PERF_NATIVE_OVERLAY"] == "off"
   public static let viewportNative = ProcessInfo.processInfo.environment["AA_PERF_NATIVE_VIEWPORT"] == "1"
+  public static let noLayoutReader = ProcessInfo.processInfo.environment["AA_PERF_LAYOUT_READER"] == "off"
   private static let lock = NSLock()
   nonisolated(unsafe) private static var counts: [String: Int] = [:]
 

@@ -11,16 +11,20 @@
   // testing, position mapping, and selection rectangle computation.
 
   extension View {
-    func overlayTextLayoutCollection(
+    @ViewBuilder func overlayTextLayoutCollection(
       isActive: Bool = true,
       @ViewBuilder content: @escaping (any TextLayoutCollection) -> some View
     ) -> some View {
+      if TextualPerfProbe.noLayoutReader {
+        self
+      } else {
       overlayPreferenceValue(Text.LayoutKey.self) { value in
         if isActive {
           GeometryReader { geometry in
             content(LiveTextLayoutCollection(base: value, geometry: geometry))
           }
         }
+      }
       }
     }
   }
