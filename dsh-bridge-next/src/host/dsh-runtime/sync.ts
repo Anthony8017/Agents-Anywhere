@@ -206,7 +206,7 @@ export class SyncFeed {
     this.native.diagnostics.log('info', 'snapshot.completed', { streamId: this.id, sessionId: id, items: snapshotItems.length, elapsedMs: Math.round(performance.now() - start) })
   }
   private async notices(id: string): Promise<void> {
-    for (const notice of this.native.questions.notices(this.namespace, id)) await this.notification('notice.upsert', notice)
+    for (const notice of [...this.native.questions.notices(this.namespace, id), ...this.native.approvals.notices(this.namespace, id)]) await this.notification('notice.upsert', notice)
   }
   private async state(id: string, snapshot?: SessionLogSnapshot): Promise<void> {
     if (!this.published.has(id) || !await this.native.visible(id)) return
@@ -217,7 +217,7 @@ export class SyncFeed {
       if (String(e.type) === 'approval/decided') pending.delete(String(record(e.data).id))
     }
     const last = log?.snapshotEvents().findLast(e => e.type === 'turn/end')
-    const status = pending.size || this.native.questions.waiting(id) ? 'waiting_approval' : this.native.status(id as SessionId)
+    const status = pending.size || this.native.questions.waiting(id) || this.native.approvals.waiting(id) ? 'waiting_approval' : this.native.status(id as SessionId)
       ?? (last?.type === 'turn/end' && last.data.reason.kind === 'error' ? 'error' : 'idle')
     let configuration: Awaited<ReturnType<NativeRuntime['configuration']['state']>>
     try {
@@ -299,7 +299,7 @@ export class SyncFeed {
         if (change.type === 'refresh') { await this.baseline(id); return }
         if (!this.published.has(id)) await this.baseline(id)
         if (!this.published.has(id)) return
-        if (change.type === 'question') await this.notices(id)
+        if (change.type === 'question' || change.type === 'approval') await this.notices(id)
         if (change.type === 'stream') {
           this.projections.get(id)?.stream(change.turn, change.step, change.chunk, change.time, change.throughSeq)
           touched.add(id)
