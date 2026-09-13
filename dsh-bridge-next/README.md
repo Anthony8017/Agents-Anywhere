@@ -45,7 +45,7 @@ RPC 解析、执行、响应大小、取消和超时错误按请求返回，不�
 
 ## 本地构建与安装
 
-需要 Node.js `^22.19.0 || >=24`、Corepack，以及运行 Connector 所需的 uv / Python 3.12+。项目使用 Yarn；DSH 安装命令内部使用其自己的包管理器。
+需要 Node.js `^22.19.0 || >=24`、Corepack，插件通过 npm 依赖 `@dataiku/uv` 提供 uv，运行 Connector 时按需准备 Python 3.12+。开发 Python 子项目时仍可使用本机 uv。项目使用 Yarn；DSH 安装命令内部使用其自己的包管理器。
 
 ```bash
 cd /Users/t4wefan/code/github/Agents-Anywhere
@@ -136,9 +136,16 @@ Host 配置位于 DSH 的插件配置行。常用项如下：
 | `apiBaseUrl` | 默认云端后端地址；上次连接时保存的后端地址优先 |
 | `stateRoot` | 操作系统用户主目录下 `.agentsanywhere/dsh-bridge-next` |
 | `connectorSourceDir` | 包内 `lib/bundled-connector`；覆盖时必须为绝对路径 |
-| `uvPath` | `UV_PATH` 环境变量或 PATH 中的 `uv`；GUI 找不到时填写 uv 可执行文件的绝对路径 |
+| `uvPath` | 优先使用显式配置或 `UV_PATH`，否则使用 npm 依赖 `@dataiku/uv` 中的平台二进制；依赖不可用时尝试系统 PATH |
 
-设置页将 uv 路径、PyPI 镜像和同步间隔原子写入 `connector-settings.json`；下次启动时恢复，uv 路径覆盖配置行中的 `uvPath`。首次初始化且没有保存过镜像选择时，Host 根据系统首选语言自动设置镜像：包含中文时直接使用阿里云，否则使用官方 PyPI，不弹出询问。macOS 读取系统语言列表，其他平台使用 Intl / POSIX 语言环境，headless 启动同样生效。选择在创建 venv 前持久化，并通过 `UV_DEFAULT_INDEX`、`UV_INDEX_URL` 和 `PIP_INDEX_URL` 传给实际子进程；已保存的镜像（包括手动选择默认 PyPI）保持不变。恢复出厂设置会重新应用系统默认镜像。
+设置页将 uv 路径、Python 下载镜像、PyPI 镜像和同步间隔原子写入 `connector-settings.json`；下次启动时恢复，uv 路径覆盖配置行中的 `uvPath`。首次初始化且没有保存过镜像选择时，Host 根据系统首选语言自动设置镜像：包含中文时直接使用阿里云，否则使用官方 PyPI，不弹出询问。macOS 读取系统语言列表，其他平台使用 Intl / POSIX 语言环境，headless 启动同样生效。选择在创建 venv 前持久化，并通过 `UV_DEFAULT_INDEX`、`UV_INDEX_URL` 和 `PIP_INDEX_URL` 传给实际子进程；已保存的镜像（包括手动选择默认 PyPI）保持不变。恢复出厂设置会重新应用系统默认镜像。
+
+Python 下载镜像独立于 PyPI 镜像，提供官方源与 npmmirror。首次初始化缺少该设置时，中文系统默认使用 npmmirror，其他语言使用官方源；已有的手动选择保持不变，恢复出厂设置重新应用语言默认值。选择通过 `UV_PYTHON_INSTALL_MIRROR` 传给 uv，仅影响解释器下载。`@dataiku/uv` 的平台可选依赖由包管理器安装，Host 直接执行其中的原生二进制，不要求 postinstall 脚本运行。
+
+日志页可以切换 Bridge 和 Connector。Connector 日志记录 uv/Python 的 stderr 与进程状态，按时间从上往下显示，首次及每次分页读取 200 行，滚到顶部加载更早记录。日志最多保留 10,000 行，写入前移除终端控制字符并脱敏凭据；stdout 保留为子进程 RPC 通道。日志在 `<stateRoot>/logs/connector-output.json` 中持久化，通过 Host RPC `readConnectorLogs` 分页读取。
+
+Bridge 的独占锁决定端点文件的写入权。获得锁后会重建残留或损坏的 `endpoint.json`，PID 仅用于诊断；关闭时只移除当前实例的端点，再释放锁。
+
 
 旧配置中的自动启动、心跳、重连及已有会话同步选项在加载时移除，不再影响连接行为。Host 重载自动恢复已授权设备；首次安装等待登录，已安装 Desktop 时仍交由 Desktop 管理。同步间隔及固定的连接参数写入实际 `connector/connector.json`。`logs/connector.jsonl` 记录本机 Connector 生命周期。
 

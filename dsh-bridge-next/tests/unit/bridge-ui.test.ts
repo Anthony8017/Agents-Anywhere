@@ -29,9 +29,14 @@ test('published client shows recovery guidance and preserves expanded log rows a
     if (name === '@deepseek-ai/dsh-client-ui-primitives') return primitives
     throw new Error(`Unexpected client import: ${name}`)
   }) } }
+  let terminal = Array.from({ length: 450 }, (_, i) => ({ id: i + 1, time: '2026-09-10T10:00:00Z', text: `terminal line ${i + 1}` }))
   const host = {
     inspect: async () => ({ desktop: { status: 'installed' }, bridge }),
     restartBridge: async () => { restarts++; bridge = { state: 'ready', message: '本机连接已就绪', hint: '', canRetry: false }; return bridge },
+    readConnectorLogs: async (query: { before?: number; after?: number } = {}) => {
+      const candidates = terminal.filter(entry => (query.before === undefined || entry.id < query.before) && (query.after === undefined || entry.id > query.after))
+      return { entries: query.after === undefined ? candidates.slice(-200) : candidates.slice(0, 200), hasMore: candidates.length > 200, oldestId: terminal[0]?.id ?? null, newestId: terminal.at(-1)?.id ?? null }
+    },
     readBridgeLogs: async () => ({ updatedAt: new Date().toISOString(), entries }),
   }
   const root = createRoot(document.getElementById('root')!)
@@ -59,6 +64,22 @@ test('published client shows recovery guidance and preserves expanded log rows a
     await click('刷新')
     assert.ok(row.isConnected)
     assert.equal(row.open, true)
+    await click('Connector')
+    const terminalView = document.querySelector('[aria-label="Connector 终端输出"]')!
+    assert.equal(terminalView.querySelectorAll('time').length, 200)
+    assert.match(terminalView.textContent!, /terminal line 251/)
+    assert.match(terminalView.textContent!, /terminal line 450/)
+    await click('加载更早的 200 行')
+    assert.equal(terminalView.querySelectorAll('time').length, 400)
+    await act(async () => { terminalView.dispatchEvent(new dom.window.Event('scroll', { bubbles: true })); await new Promise(resolve => setTimeout(resolve, 10)) })
+    assert.equal(terminalView.querySelectorAll('time').length, 450)
+    terminal.push({ id: 451, time: '2026-09-10T10:00:01Z', text: '<script>plain log</script>' })
+    await click('刷新')
+    assert.equal(terminalView.querySelectorAll('time').length, 451)
+    assert.equal(terminalView.querySelector('script'), null)
+    assert.match(terminalView.textContent!, /<script>plain log<\/script>/)
+    await click('Bridge')
+    assert.ok(document.querySelector('details'))
     await click('尝试重启')
     assert.equal(restarts, 1)
     assert.doesNotMatch(document.body.textContent!, /本机连接被占用/)
