@@ -1,7 +1,7 @@
 # Cluster A
 
-See MIGRATION.md and migration-state.json for the current stopped alpha /
-production migration state. deployed.json is the earlier alpha snapshot.
+See MIGRATION.md and migration-state.json for the current production migration and
+application readiness state. deployed.json is the earlier alpha snapshot.
 
 Two identical Docker workers bind HTTP to 127.0.0.1:8000, including the static Web UI,
 API and WebSockets. Each runs three FastAPI processes, with the additional event process pool disabled. PostgreSQL and Redis run

@@ -1,4 +1,44 @@
-# Production migration preparation (2026-09-14)
+# Production migration (2026-09-14)
+
+## Final state: 03:31 CST
+
+The production database is restored and both application containers are running
+healthy with three FastAPI workers each, bound only to 127.0.0.1:8000. All 28
+restored table counts matched the stopped source exactly before application
+startup: 1,142 users, 46,016 sessions, 7,892,198 Timeline rows. Schema v2_35,
+index validity, constraint validation and application-role ownership passed.
+Planner statistics were refreshed; temporary restore tuning was reverted.
+
+The final attachment snapshot has 364 files / 728 objects / 791,259,962 bytes.
+The previous 722 objects were reverified and six incremental objects copied.
+Both nodes passed existing-user authentication using a short-lived diagnostic
+token and read a historical attachment through the HTTP API, then fetched its
+TOS redirect and checked content integrity. No user password was changed.
+
+The original production signing secret is present on both workers and the
+public origin is https://web.agents-anywhere.com. Bootstrap is false. The old
+application is stopped with restart policy no. Its PostgreSQL, Redis, original
+attachments and archive remain available. Original app configuration is saved
+privately at /root/aa-cutover/old-container.json and old-runtime.env.
+
+Routing, DNS and maintenance pages are user managed and were not changed during
+this cutover. App readiness is distinct from completion of the public cutover.
+
+The 9,340,304,027-byte pg_dump archive is at /root/aa-cutover/production.dump on
+both the old server and DB node. Its SHA-256 is recorded in cutover.json. Restore
+took 831 seconds. DB-node logs and exact count manifests live in /root/aa-cutover;
+worker-1 attachment report is /root/aa-migration/reports/attachments-cutover.json.
+Do not restart old writers after the new database accepts writes without first
+planning reconciliation; the preserved old database is a frozen rollback source.
+
+During source shutdown, Redis subscriber close raised ConnectionError after the
+Timeline buffer drain. The pending set was confirmed empty, app workers exited,
+and remaining event subprocesses were terminated. No new-node startup errors or
+warnings were present at final verification.
+
+## Earlier preparation snapshot
+
+The remainder documents preparation before the final database cutover above.
 
 Current state is recorded in migration-state.json. deployed.json describes the
 historical alpha deployment, not the currently stopped application state.
