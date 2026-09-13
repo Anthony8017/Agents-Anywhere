@@ -1,0 +1,8 @@
+{"event":"fixture","items":18,"mode":"timeline","scenario":"mixed","selection":true,"streaming":false,"toolsExpanded":false,"visibleTextCharacters":6072}
+{"event":"mounted","initialCounters":{"block.sizeThatFits":123,"builder.sizeChanged":27,"fragment.body":102,"highlighter.highlight":6,"highlighter.tokenize":3,"markdown.body":6,"markdown.parse":3,"selection.updateUIView":27},"scrollHeight":5035,"selectionViews":27,"viewportHeight":781.66666666666663,"views":75}
+{"event":"begin","phase":"idle"}
+{"callbackMaxms":17.301749991020188,"callbackP50ms":16.664750000927597,"callbackP95ms":17.274666664889082,"callbacks":180,"callbacksOver25ms":0,"contentHeights":[5035],"counters":{},"cpuSeconds":0.01626099999999997,"event":"result","offsetChanges":0,"phase":"idle","wallSeconds":3.0020744999928866}
+{"event":"begin","phase":"scroll"}
+{"callbackMaxms":116.65970832109451,"callbackP50ms":16.665416653268039,"callbackP95ms":17.256541672395542,"callbacks":713,"callbacksOver25ms":2,"contentHeights":[5035],"counters":{},"cpuSeconds":1.2113950000000002,"event":"result","offsetChanges":714,"phase":"scroll","wallSeconds":12.015999875002308}
+{"charactersRead":0,"event":"selectionCheck","failures":6,"visibleOverlays":6}
+{"event":"finished"}

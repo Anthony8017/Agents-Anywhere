@@ -1,0 +1,8 @@
+{"event":"fixture","items":18,"mode":"timeline","scenario":"mixed","selection":true,"streaming":false,"toolsExpanded":false,"visibleTextCharacters":6072}
+{"event":"mounted","initialCounters":{},"scrollHeight":5035,"selectionViews":27,"viewportHeight":781.66666666666663,"views":75}
+{"event":"begin","phase":"idle"}
+{"callbackMaxms":32.809166674269363,"callbackP50ms":16.670583339873701,"callbackP95ms":17.02262501930818,"callbacks":179,"callbacksOver25ms":1,"contentHeights":[5035],"counters":{},"cpuSeconds":0.022329000000000043,"event":"result","offsetChanges":0,"phase":"idle","wallSeconds":3.0048602083406877}
+{"event":"begin","phase":"scroll"}
+{"callbackMaxms":33.34070832352154,"callbackP50ms":16.666625015204772,"callbackP95ms":16.698416671715677,"callbacks":719,"callbacksOver25ms":1,"contentHeights":[5035],"counters":{},"cpuSeconds":2.537337,"event":"result","offsetChanges":720,"phase":"scroll","wallSeconds":12.015154416672885}
+{"charactersRead":1746,"event":"selectionCheck","failures":0,"visibleOverlays":7}
+{"event":"finished"}

@@ -1,0 +1,7 @@
+{"event":"fixture","items":18,"mode":"markdown","scenario":"prose","selection":false,"streaming":false,"toolsExpanded":false,"visibleTextCharacters":4347}
+{"event":"mounted","initialCounters":{"block.sizeThatFits":180,"builder.sizeChanged":30,"fragment.body":98,"markdown.body":6,"markdown.parse":3},"scrollHeight":5474,"selectionViews":0,"viewportHeight":781.66666666666663,"views":11}
+{"event":"begin","phase":"idle"}
+{"callbackMaxms":33.367166673997417,"callbackP50ms":16.669333330355585,"callbackP95ms":17.263999994611368,"callbacks":178,"callbacksOver25ms":1,"contentHeights":[5474],"counters":{},"cpuSeconds":0.019241999999999981,"event":"result","offsetChanges":0,"phase":"idle","wallSeconds":3.0005282500060275}
+{"event":"begin","phase":"scroll"}
+{"callbackMaxms":16.773041686974466,"callbackP50ms":16.666958341374993,"callbackP95ms":16.700999985914677,"callbacks":720,"callbacksOver25ms":0,"contentHeights":[5474],"counters":{},"cpuSeconds":0.90640299999999996,"event":"result","offsetChanges":721,"phase":"scroll","wallSeconds":12.015541833330644}
+{"event":"finished"}

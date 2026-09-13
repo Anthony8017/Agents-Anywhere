@@ -1,0 +1,8 @@
+{"event":"fixture","items":18,"mode":"timeline","scenario":"prose","selection":true,"streaming":false,"toolsExpanded":false,"visibleTextCharacters":4347}
+{"event":"mounted","initialCounters":{"block.sizeThatFits":243,"builder.sizeChanged":33,"fragment.body":108,"layoutCollection.equal":771,"layoutCollection.init":229,"markdown.body":6,"markdown.parse":3,"selection.setLayout":222,"selection.updateUIView":33},"scrollHeight":6039,"selectionViews":33,"viewportHeight":781.66666666666663,"views":75}
+{"event":"begin","phase":"idle"}
+{"callbackMaxms":17.279083316680044,"callbackP50ms":16.667416668497026,"callbackP95ms":16.988708346616477,"callbacks":180,"callbacksOver25ms":0,"contentHeights":[6039],"counters":{},"cpuSeconds":0.015116000000000018,"event":"result","offsetChanges":0,"phase":"idle","wallSeconds":3.0107176250021439}
+{"event":"begin","phase":"scroll"}
+{"callbackMaxms":33.128208335256204,"callbackP50ms":16.667958348989487,"callbackP95ms":17.038708319887519,"callbacks":719,"callbacksOver25ms":1,"contentHeights":[6039],"counters":{"block.sizeThatFits":142,"layoutCollection.equal":14299,"layoutCollection.init":3614,"selection.setLayout":3614},"cpuSeconds":2.4150389999999997,"event":"result","offsetChanges":720,"phase":"scroll","wallSeconds":12.015659958327888}
+{"charactersRead":591,"event":"selectionCheck","failures":0,"visibleOverlays":5}
+{"event":"finished"}
