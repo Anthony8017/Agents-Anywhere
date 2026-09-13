@@ -1,0 +1,33 @@
+{
+  "phase": "source_stopped_backup_in_progress",
+  "date": "2026-09-14",
+  "source_host": "web.agents-anywhere.com",
+  "source_application": "agents-anywhere-server-next-1",
+  "source_application_stopped": true,
+  "timeline_pending_sessions_after_stop": 0,
+  "source_shutdown_note": "Timeline subscriber close raised Redis ConnectionError after buffer drain; application workers exited and remaining event subprocesses were terminated. Pending set was confirmed empty.",
+  "routing_dns_maintenance": "User managed. Do not modify.",
+  "database_backup_source": "/root/aa-cutover/production.dump",
+  "database_backup_target": "/root/aa-cutover/production.dump",
+  "source_counts": {
+    "tables": 28,
+    "users": 1142,
+    "sessions": 46016,
+    "timeline_items": 7892198
+  },
+  "attachments": {
+    "files": 364,
+    "objects": 728,
+    "bytes": 791259962,
+    "bucket": "alpha-1-agents-anywhere",
+    "prefix": "web-production/attachments",
+    "readback_verified": 728,
+    "new_objects": 6,
+    "unchanged_objects": 722
+  },
+  "production_authentication_secret_copied": true,
+  "target_public_origin": "https://web.agents-anywhere.com",
+  "application_image": "agents-anywhere:cluster-a-c4be624b",
+  "application_code_matches_source_server": true,
+  "workers_started": false
+}
