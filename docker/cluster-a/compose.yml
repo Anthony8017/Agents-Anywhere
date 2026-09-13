@@ -14,7 +14,7 @@ services:
       AGENT_SERVER_FILES_BACKEND: s3
       AGENT_SERVER_STATIC_DIR: /app/web-static
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     stop_grace_period: 60s
     mem_limit: 12g
     cpus: 3.5

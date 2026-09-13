@@ -1,6 +1,6 @@
 # Cluster A
 
-Two identical Docker workers expose HTTP port 8000, including the static Web UI,
+Two identical Docker workers bind HTTP to 127.0.0.1:8000, including the static Web UI,
 API and WebSockets. Each runs three FastAPI processes. PostgreSQL and Redis run
 on 192.168.1.35 and accept LAN traffic only. Both workers must share their database,
 Redis, token secret and S3 configuration; instance IDs differ by node.
@@ -36,6 +36,6 @@ is ready, restrict direct access to that ingress if required by the deployment.
 Before starting Docker services, install worker-access.nft as
 /etc/nftables.d/aa-worker-access.nft and worker-access.service as
 /etc/systemd/system/aa-worker-access.service, then enable it with
-systemctl enable --now aa-worker-access.service. Only 192.168.1.0/24 may
-reach TCP 8000 via eth0; host-local access remains available. These independent
+systemctl enable --now aa-worker-access.service. The Compose bind allows only host-local access. As defense in depth, the ingress
+filter also drops external TCP 8000 traffic. These independent
 nftables rules run before Docker DNAT and also block IPv6 ingress to that port.
