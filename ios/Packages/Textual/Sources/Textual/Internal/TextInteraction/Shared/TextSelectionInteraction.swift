@@ -16,6 +16,7 @@ struct TextSelectionInteraction: ViewModifier {
     @Environment(\.textSelection) private var textSelection
     @Environment(TextSelectionCoordinator.self) private var coordinator: TextSelectionCoordinator?
 
+    @State private var probeVisible = true
     @State private var model = TextSelectionModel()
   #endif
 
@@ -23,7 +24,7 @@ struct TextSelectionInteraction: ViewModifier {
     #if TEXTUAL_ENABLE_TEXT_SELECTION
       if textSelection.allowsSelection && !TextualPerfProbe.noSelection {
         content
-          .overlayTextLayoutCollection { layoutCollection in
+          .overlayTextLayoutCollection(isActive: !TextualPerfProbe.viewportSelection || probeVisible || model.selectedRange != nil) { layoutCollection in
             Color.clear
               .onChange(of: AnyTextLayoutCollection(layoutCollection), initial: true) {
                 model.setCoordinator(coordinator)
@@ -31,6 +32,9 @@ struct TextSelectionInteraction: ViewModifier {
               }
           }
           .modifier(PlatformTextSelectionInteraction(model: model))
+          .onScrollVisibilityChange(threshold: 0.01) { visible in
+            if TextualPerfProbe.viewportSelection { probeVisible = visible }
+          }
       } else {
         content
       }

@@ -60,7 +60,7 @@ import Darwin
             if case var .object(fields) = object {
                 fields["status"] = .string("running")
                 if case var .object(content) = fields["content"] {
-                    content["text"] = .string(last.text + " ")
+                    content["text"] = .string(last.text + " 暂停输出")
                     fields["content"] = .object(content)
                 }
                 object = .object(fields)
@@ -162,6 +162,25 @@ final class DriverView: UIView {
         intervals = []; heights = []; offsetChanges = 0; cpuStart = cpuTime(); _ = TextualPerfProbe.take()
         report(["event": "begin", "phase": phase])
     }
+    func verifySelection() {
+        guard let window = view?.window else { return }
+        @MainActor func descendants(_ view: UIView) -> [UIView] { [view] + view.subviews.flatMap(descendants) }
+        var total = 0, failures = 0, visible = 0
+        for view in descendants(window) {
+            guard String(describing: type(of: view)).contains("UITextInteractionView"), let input = view as? any UITextInput else { continue }
+            let rect = view.convert(view.bounds, to: window).intersection(window.bounds)
+            guard rect.width > 1, rect.height > 1 else { continue }
+            visible += 1
+            let local = view.convert(CGPoint(x: rect.midX, y: rect.midY), from: window)
+            guard let position = input.closestPosition(to: local),
+                  let range = input.textRange(from: input.beginningOfDocument, to: input.endOfDocument),
+                  let text = input.text(in: range), !text.isEmpty else { failures += 1; continue }
+            let caret = input.caretRect(for: position)
+            if !caret.minX.isFinite || !caret.minY.isFinite || caret.isEmpty { failures += 1 }
+            total += text.count
+        }
+        report(["event": "selectionCheck", "visibleOverlays": visible, "failures": failures, "charactersRead": total])
+    }
     @objc func tick(_ link: CADisplayLink) {
         let now = CACurrentMediaTime()
         if previous > 0 { intervals.append((now - previous) * 1000) }
@@ -189,6 +208,7 @@ final class DriverView: UIView {
         if phase == "idle" { y = scroll?.contentOffset.y ?? 0; begin("scroll") }
         else {
             link.invalidate(); displayLink = nil
+            verifySelection()
             report(["event": "finished"])
         }
     }
