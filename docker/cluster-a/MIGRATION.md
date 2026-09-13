@@ -5,7 +5,10 @@ historical alpha deployment, not the currently stopped application state.
 
 Both alpha applications are stopped. The DB node now runs a fresh PostgreSQL
 17.11 cluster, max_connections=300, using the original 1Panel Compose service
-and new ./data17:/var/lib/postgresql/data mount. The old PostgreSQL 18 alpha
+and new ./data17:/var/lib/postgresql/data mount. The database port is bound to
+192.168.1.35:5432 (HOST_IP in the protected 1Panel .env); the existing
+192.168.1.0/24 source firewall remains active. Both worker hosts authenticated
+with the application role and confirmed PostgreSQL 17 and an empty schema. The old PostgreSQL 18 alpha
 storage was removed. Compose configuration was backed up before replacement.
 Keep the PostgreSQL 17 image and data mount when managing this custom service
 through 1Panel; do not restore the obsolete PostgreSQL 18 template.

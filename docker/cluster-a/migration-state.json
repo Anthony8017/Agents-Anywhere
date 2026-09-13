@@ -23,5 +23,7 @@
   "errors": 0,
   "source_snapshot_manifest_sha256": "385f47ea7dfadf89e841d2ee3641966d27d12065f21407561583c64f8ca333ac",
   "snapshot_directory_worker1": "/root/aa-migration/old-attachments",
-  "report_worker1": "/root/aa-migration/reports/attachments-upload.json"
+  "report_worker1": "/root/aa-migration/reports/attachments-upload.json",
+  "postgres_bind": "192.168.1.35:5432",
+  "both_workers_database_login_verified": true
 }
