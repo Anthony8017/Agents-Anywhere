@@ -1,7 +1,7 @@
 # Cluster A
 
 Two identical Docker workers bind HTTP to 127.0.0.1:8000, including the static Web UI,
-API and WebSockets. Each runs three FastAPI processes. PostgreSQL and Redis run
+API and WebSockets. Each runs three FastAPI processes, with the additional event process pool disabled. PostgreSQL and Redis run
 on 192.168.1.35 and accept LAN traffic only. Both workers must share their database,
 Redis, token secret and S3 configuration; instance IDs differ by node.
 
@@ -11,7 +11,7 @@ total (5 persistent + 5 overflow per process), leaving room under the configured
 maxmemory-policy noeviction because it buffers accepted Timeline writes.
 
 Build one image from a committed release and distribute that exact image to both
-workers. Keep the checkout under /root/code/github/Agents-Anywhere on each node.
+workers. Release archives live under /root/code/github/Agents-Anywhere-releases/<release> on each node.
 Copy .env.example to .env, fill credentials, and chmod 600 .env. Never commit it.
 Run commands in this directory:
 
