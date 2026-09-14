@@ -1,5 +1,11 @@
 # DSH Bridge Next 验证记录
 
+## PR #73 主线集成复核（2026-09-14）
+
+与 `287fc57a` 主线合并时，保留主线的 OS 管理租约与 `unlink` 接管实现：它已覆盖存活 PID 的陈旧 endpoint，且能处理损坏的描述文件。本 PR 保留贡献者新增的独立存活进程 PID 回归测试，不恢复旧的 PID 判断或 JSON 读取前置条件。
+
+macOS 本地重新构建插件后，`runtime.test.ts` 与 `runtime-ownership.test.ts` 共 8 项全部通过，覆盖 PID 复用、崩溃释放租约、并发独占、错误凭据、清理归属和真实 Python adapter 工作流。`tsc -p tsconfig.host.json` 通过。本轮没有执行 Windows 实机测试，也不代表全项目 CI 已通过。
+
 ## 陈旧 endpoint 的 pid 复用误判（2026-09-12）
 
 Windows 实机报告「本机连接被占用，无法启动」。`<DSH_HOME>/agents-anywhere/bridge/endpoint.json` 残留了当天 15:03 首次启动写入的记录（`pid 7444`），该 pid 随后被系统复用为无关系统进程；`processExists()` 只执行 `process.kill(pid, 0)`，因此每次重试都在 `RuntimeServer.open` 抛 `Another DSH bridge owns this DSH_HOME endpoint`（`BRIDGE_IN_USE`），只有手工删除该文件后重启才恢复。删除后 18:45 重新发布端点，Connector 随后接入并完成 10 个会话的首次同步。
