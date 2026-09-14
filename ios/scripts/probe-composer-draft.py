@@ -53,9 +53,10 @@ def main():
                 '        .onChange(of: session.failure, initial: true)')
         replace("Models/Chat/SessionChatModel.swift", "func prepareOpening() async {",
                 "func prepareComposerProbe() { isOpeningPrepared = true }\n\n    func prepareOpening() async {")
-        for relative, name in [("Views/Chat/ChatTimelineView.swift", "timeline"),
-                               ("Views/Chat/Composer/ChatComposer.swift", "composer")]:
-            replace(relative, "var body: some View {", f'var body: some View {{\n        let _ = ComposerProbe.hit("{name}")')
+        replace("Views/Chat/ChatTimelineView.swift", "var body: some View {\n        // A sibling overlay",
+                'var body: some View {\n        let _ = ComposerProbe.hit("timeline")\n        // A sibling overlay')
+        replace("Views/Chat/Composer/ChatComposer.swift", "var body: some View {",
+                'var body: some View {\n        let _ = ComposerProbe.hit("composer")')
         replace("Repositories/V2SessionRepository.swift", "func draftDidChange() { schedulePersistence() }",
                 'func draftDidChange() { ComposerProbe.hit("persistence"); schedulePersistence() }')
         with (args.output / "build.log").open("w") as log:
