@@ -191,7 +191,8 @@ test('native answers, whole-request cancellation, pending replay and Connector f
     const plan = f.ctx.userQuestions.ask({ agent: handle.agent, questions: [{ id: 'plan', question: '计划', detail: '步骤', intent: { kind: 'plan-review', approve: '好' }, options: [{ label: '好' }] }] })
     const planEvent = await client.next()
     await delay(30)
-    assert.equal(f.runtime.questions.waiting(id), false)
+    await until(() => f.runtime.questions.waiting(id), 'plan review is available remotely')
+    assert.equal(f.runtime.questions.notices('test', id).find(n => n.status === 'open')!.title, '请审阅计划')
     await client.reply(planEvent.eventId as string, { kind: 'result', value: { answers: [{ id: 'plan', selected: ['好'] }] } })
     await plan
     await handle.dispose()
@@ -231,5 +232,38 @@ test('questions cross the Python adapter and existing backend notice/respond end
       cwd: new URL('../../../server/', import.meta.url), timeout: 45_000,
     })
     assert.match(result.stdout, /DSH question pipeline passed/)
+  } finally { await f.close() }
+})
+
+test('plan review accepts approval, revision feedback and cancellation through the platform', { timeout: 30_000 }, async () => {
+  const f = await fixture()
+  const id = SessionId('plan-review')
+  const platformId = sessionId('test', id)
+  try {
+    const handle = await f.ctx.agents.create({ sessionId: id, agentOptions: { provider: 'test', model: 'text' }, meta: { cwd: f.home } })
+    handle.agent.session.append('turn/start', { turn: 1 })
+    handle.agent.session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '请制定计划' }] }), { surfaceOp: 'append' })
+    const detail = '# 实施计划\n\n1. 检查配置\n2. 修改代码\n3. 验证结果'
+    const ask = () => f.ctx.userQuestions.ask({ agent: handle.agent, questions: [{ id: 'plan', question: '是否按此计划继续？', detail,
+      intent: { kind: 'plan-review', approve: '批准计划' }, options: [{ label: '修改计划' }, { label: '批准计划' }] }] })
+    for (const [input, answer] of [
+      [{ optionIds: ['o_1'] }, { id: 'plan', selected: ['批准计划'] }],
+      [{ optionIds: ['o_0'] }, { id: 'plan', selected: ['修改计划'] }],
+      [{ customText: '请先添加测试' }, { id: 'plan', selected: [], custom: '请先添加测试' }],
+    ]) {
+      const pending = ask()
+      await until(() => f.runtime.questions.waiting(id), 'plan awaiting review')
+      const notice = f.runtime.questions.notices('test', id).find(item => item.status === 'open')!
+      assert.equal(notice.title, '请审阅计划')
+      assert.ok(notice.actions[0]!.input!.uiSchema.questions[0]!.prompt.includes(detail))
+      assert.equal((await f.request('session.respondInteraction', { sessionId: platformId, noticeId: notice.noticeId, actionId: 'submit', inputData: { answers: { plan: input } } }) as { ok: boolean }).ok, true)
+      assert.deepEqual(await pending, { answers: [answer] })
+    }
+    const pending = ask().then(() => assert.fail('cancelled review must reject'), error => error)
+    await until(() => f.runtime.questions.waiting(id), 'cancelable plan')
+    const notice = f.runtime.questions.notices('test', id).find(item => item.status === 'open')!
+    assert.equal((await f.request('session.respondInteraction', { sessionId: platformId, noticeId: notice.noticeId, actionId: 'cancel' }) as { ok: boolean }).ok, true)
+    assert.equal((await pending).code, 'ASK_CANCELLED')
+    await handle.dispose()
   } finally { await f.close() }
 })

@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { Button, Input, Menu, RiskConfirmation, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ChevronDown, FolderOpen, Power, RotateCw } from 'lucide-react'
-import { PYPI_MIRRORS, SYNC_INTERVALS } from '../../../contracts/connector.js'
+import { PYPI_MIRRORS, PYTHON_MIRRORS, SYNC_INTERVALS } from '../../../contracts/connector.js'
 import type { OnboardingHostApi, OnboardingSnapshot } from '../../../contracts/index.js'
 import { connectorStatus } from './account-panel.js'
 import type { OnboardingState } from './state.js'
@@ -79,8 +79,14 @@ export function SettingsPanel({ host, state, snapshot, onConnection }: {
         <h3>运行环境</h3>
         <label className={css.field} htmlFor={`${id}-uv`}>uv 路径</label>
         <Input id={`${id}-uv`} className={css.input!} disabled={busy} value={draft.uvPath} spellCheck={false}
-          placeholder="留空自动查找 uv" autoComplete="off" onChange={event => update('uvPath', event.target.value)} />
+          placeholder="留空使用内置 uv" autoComplete="off" onChange={event => update('uvPath', event.target.value)} />
         <p className={css.hint}>当前路径：<span className={css.path}>{management.resolvedUvPath || '未找到 uv'}</span></p>
+        <div className={css.row}>
+          <span>Python 下载镜像</span>
+          <Choice label="Python 下载镜像" value={PYTHON_MIRRORS.find(item => item.url === draft.uvPythonInstallMirror)?.id ?? 'default'} disabled={busy}
+            options={PYTHON_MIRRORS.map(({ id, label }) => ({ id, label }))}
+            onChange={id => update('uvPythonInstallMirror', PYTHON_MIRRORS.find(item => item.id === id)!.url)} />
+        </div>
         <div className={css.row}>
           <span>PyPI 镜像</span>
           <Choice label="PyPI 镜像" value={mirror} disabled={busy} options={PYPI_MIRRORS.map(({ id, label }) => ({ id, label }))}

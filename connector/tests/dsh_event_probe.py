@@ -8,6 +8,7 @@ No dev server, user credentials, or actual model provider is used.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import sys
@@ -53,8 +54,11 @@ async def main(home: Path) -> None:
     await app.state.store.create_user(user_id="dsh-test", password_hash="test-only")
     async with app.router.lifespan_context(app):
         store = app.state.store
-        connector, _, _ = await store.create_connector(name="test", user_id="dsh-test")
-        token = create_connector_access_token(connector.id)
+        connector, credential, _ = await store.create_connector(name="test", user_id="dsh-test")
+        token = create_connector_access_token(
+            connector.id,
+            credential_hash=hashlib.sha256(credential.encode("utf-8")).hexdigest(),
+        )
         transport = IngestTransport(app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as http:
             async def access_token(_force):

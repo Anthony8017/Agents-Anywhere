@@ -33,6 +33,7 @@ from connector.logging import logger
 from connector.runtime_protocol import RuntimeConfig, RuntimeInvalidRequestError
 from connector.runtimes.codex.runtime_helpers import soft_codex_unavailable_reason
 from connector.runtimes.codex.sdk.binary import (
+    codex_launch_command,
     codex_runtime_environment,
     select_codex_runtime_binary,
 )
@@ -807,7 +808,17 @@ def _sdk_config(sdk: Any, config: RuntimeConfig) -> Any:
         binary_selection.codex_bin,
         binary_selection.login_shell,
     )
+    launch_options: dict[str, Any] = {}
+    if binary_selection.codex_bin is not None:
+        command = codex_launch_command(
+            binary_selection.codex_bin,
+            ["app-server", "--listen", "stdio://"],
+            runtime_environment,
+        )
+        if command[0] != binary_selection.codex_bin:
+            launch_options["launch_args_override"] = tuple(command)
     return config_cls(
+        **launch_options,
         codex_bin=binary_selection.codex_bin,
         env=runtime_environment,
         client_name="agents_anywhere_connector",

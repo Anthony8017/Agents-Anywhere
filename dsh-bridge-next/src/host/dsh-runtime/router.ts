@@ -157,17 +157,18 @@ export class RuntimeRouter {
         signal.throwIfAborted()
         const liveStatus = this.reader.status(id)
         return { runtime: 'dsh', sessionId: sessionId(this.namespace, id), externalSessionId: id, sourceState,
-          status: native.questions.waiting(id) ? 'waiting_approval' : liveStatus ?? (facts.lastTurnEndKind === 'error' ? 'error' : 'idle'),
+          status: native.questions.waiting(id) || native.approvals.waiting(id) ? 'waiting_approval' : liveStatus ?? (facts.lastTurnEndKind === 'error' ? 'error' : 'idle'),
           selections: facts.configuration.selections,
           metadata: { ...facts.configuration.metadata, readOnly: !native.ctx.get('sessionController'), attached: liveStatus !== undefined } }
       }
       case 'session.getNotices': {
         const id = await this.resolve(params, signal)
-        return { notices: this.reader.native?.questions.notices(this.namespace, id) ?? [] }
+        return { notices: [...(this.reader.native?.questions.notices(this.namespace, id) ?? []), ...(this.reader.native?.approvals.notices(this.namespace, id) ?? [])] }
       }
       case 'session.respondInteraction': {
         const id = await this.resolve(params, signal)
         if (!this.reader.native || typeof params.noticeId !== 'string' || typeof params.actionId !== 'string') throw new BridgeError('INVALID_PARAMS', 'A question and action are required.')
+        if (this.reader.native.approvals.owns(this.namespace, id, params.noticeId)) return this.reader.native.approvals.respond(this.namespace, id, params.noticeId, params.actionId)
         return this.reader.native.questions.respond(this.namespace, id, params.noticeId, params.actionId, params.inputData)
       }
       case 'session.getCapabilities': {

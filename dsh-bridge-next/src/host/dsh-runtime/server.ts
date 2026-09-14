@@ -68,13 +68,8 @@ export class RuntimeServer {
     const endpoint: Endpoint = { version: 1, host: '127.0.0.1', port: address.port, token, pid: process.pid }
     try {
       await mkdir(dirname(this.endpointPath), { recursive: true, mode: 0o700 })
-      const existing = await endpointAt(this.endpointPath)
-      // The manager lease is the ownership authority. A live bridge holds the
-      // directory-derived lease port, so reaching this point already proves no
-      // live bridge owns this path. A recorded pid is not evidence either way:
-      // the OS can hand a crashed bridge's pid to an unrelated process, which
-      // used to block startup until the stale file was deleted by hand.
-      if (existing) await unlink(this.endpointPath)
+      // The acquired OS lease is authoritative; descriptors can survive crashes or Host reloads.
+      await unlink(this.endpointPath).catch(error => { if (record(error).code !== 'ENOENT') throw error })
       // Link publishes a complete file atomically and refuses to overwrite a competing owner.
       const temporary = `${this.endpointPath}.${token}.tmp`
       try {
@@ -184,10 +179,10 @@ export class RuntimeServer {
           clearTimeout(authTimer)
           this.diagnostics.log('info', 'bridge.initialized', { connectionId, syncMode: this.reader.native ? 'events' : 'polling' })
           send({ jsonrpc: '2.0', id, result: {
-            identity: { runtime: 'dsh', runtimeVersion: '0.1.2-rc.1', bridgeVersion: '0.1.0-dev.0', protocolVersion: '1.0', displayName: 'DeepSeek Harness' },
+            identity: { runtime: 'dsh', runtimeVersion: '0.1.5-rc.2', bridgeVersion: '0.1.0-dev.0', protocolVersion: '1.0', displayName: 'DeepSeek Harness' },
             storage: { mode: 'dsh-native', sameSessionWriterLimit: 1, crossProcessWriterExclusion: false },
             features: { attachments: Boolean(this.reader.native?.ctx.get('sessionController') && this.reader.native.ctx.get('attachments')),
-              sessionDiscovery: true, timelineSuffixRead: false, approval: false, userQuestions: this.reader.native?.questions.available ?? false,
+              sessionDiscovery: true, timelineSuffixRead: false, approval: this.reader.native?.approvals.available ?? false, userQuestions: this.reader.native?.questions.available ?? false,
               readOnly: !this.reader.native?.ctx.get('sessionController'), snapshotPagination: true, syncMode: this.reader.native ? 'events' : 'polling', projectionVersion: 2 },
           } })
           return
