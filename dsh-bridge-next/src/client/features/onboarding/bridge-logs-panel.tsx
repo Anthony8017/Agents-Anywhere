@@ -2,9 +2,21 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { OnboardingHostApi } from '../../../contracts/index.js'
 import type { BridgeLogSnapshot } from '../../../contracts/logs.js'
+import { ConnectorLogsPanel } from './connector-logs-panel.js'
 import css from './bridge-logs-panel.module.css'
 
 export function BridgeLogsPanel({ host }: { host: OnboardingHostApi }) {
+  const [source, setSource] = useState<'bridge' | 'connector'>('bridge')
+  return <div>
+    <div className={css.sources} role="group" aria-label="日志来源">
+      <Button variant={source === 'bridge' ? 'primary' : 'outline'} aria-pressed={source === 'bridge'} onClick={() => setSource('bridge')}>Bridge</Button>
+      <Button variant={source === 'connector' ? 'primary' : 'outline'} aria-pressed={source === 'connector'} onClick={() => setSource('connector')}>Connector</Button>
+    </div>
+    {source === 'bridge' ? <BridgeLogView host={host} /> : <ConnectorLogsPanel host={host} />}
+  </div>
+}
+
+function BridgeLogView({ host }: { host: OnboardingHostApi }) {
   const [snapshot, setSnapshot] = useState<BridgeLogSnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [paused, setPaused] = useState(false)

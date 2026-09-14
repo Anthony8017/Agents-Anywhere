@@ -13,6 +13,9 @@ import { ConnectorSettingsStore } from '../../src/host/connector/settings.js'
 const fixtureSource = `
 const readline = require('node:readline');
 let running = false;
+if (process.argv[2] === 'exit-error') { process.stderr.write('error: Python download failed: connection reset\\n'); process.exit(2); }
+process.stderr.write('uv: preparing Python environment\\n');
+process.stderr.write('PRIVATE-DEVICE-TOKEN\\n');
 const lines = readline.createInterface({ input: process.stdin });
 lines.on('line', line => {
   if (process.argv[2] === 'stall') return;
@@ -56,6 +59,7 @@ async function fixture(mode = 'normal', settings: ConnectorSettings = DEFAULT_CO
     assert.equal(options.env?.UV_PROJECT_ENVIRONMENT, join(root, 'data', 'connector-venv'))
     assert.equal(options.env?.DSH_HOME, join(root, 'dsh-home'))
     const expectedIndex = settings.uvPypiIndexUrl || 'https://pypi.org/simple'
+    assert.equal(options.env?.UV_PYTHON_INSTALL_MIRROR, settings.uvPythonInstallMirror || 'https://github.com/astral-sh/python-build-standalone/releases/download')
     assert.equal(options.env?.UV_DEFAULT_INDEX, expectedIndex)
     assert.equal(options.env?.UV_INDEX_URL, expectedIndex)
     assert.equal(options.env?.PIP_INDEX_URL, expectedIndex)
@@ -118,8 +122,9 @@ test('saved scan interval and mirror reach the child while connection defaults s
       assert.equal(config?.connectorToken, binding.connectorToken)
       await h.connector.stop()
     }
-    const logs = await readFile(join(h.root, 'data', 'logs', 'connector.jsonl'), 'utf8')
-    assert.match(logs, /"event":"running"/)
+    const logs = await readFile(join(h.root, 'data', 'logs', 'connector-output.json'), 'utf8')
+    assert.match(logs, /\[process\] running/)
+    assert.match(logs, /uv: preparing Python environment/)
     assert.doesNotMatch(logs, /PRIVATE|connectorToken/)
   } finally { await h.close() }
 })
@@ -163,5 +168,16 @@ test('source Connector preserves RPC conflict identity and stops only its reject
     assert.equal(h.connector.running, false)
     assert.equal(h.child?.exitCode, 0)
     assert.equal((await readJson<{ connectorId: string }>(join(h.root, 'data', 'connector', 'connector.json')))?.connectorId, binding.connectorId)
+  } finally { await h.close() }
+})
+
+
+test('startup exit 2 preserves uv diagnostics in the Connector journal', async () => {
+  const h = await fixture('exit-error')
+  try {
+    await assert.rejects(h.connector.start(binding, 'https://api.example.test', new AbortController().signal), /已退出（2）/)
+    const logs = await readFile(join(h.root, 'data', 'logs', 'connector-output.json'), 'utf8')
+    assert.match(logs, /Python download failed: connection reset/)
+    assert.match(logs, /exited \(2\)/)
   } finally { await h.close() }
 })

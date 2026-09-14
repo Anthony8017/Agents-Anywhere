@@ -1,7 +1,7 @@
 import type { BridgeStatus } from './bridge-status.js'
 import type { ConnectorAction, ConnectorFolder, ConnectorManagement, ConnectorSettings } from './connector.js'
 import type { MobileLoginSnapshot } from './mobile.js'
-import type { BridgeLogSnapshot } from './logs.js'
+import type { ConnectorLogPage, ConnectorLogQuery, BridgeLogSnapshot } from './logs.js'
 
 // The Connector bridge protocol stays in contracts/dsh-bridge.
 export const HOST_NAMESPACE = 'agentsAnywhereOnboarding'
@@ -61,6 +61,7 @@ export interface OnboardingSnapshot {
 export interface OnboardingHostApi {
   restartBridge(): Promise<BridgeStatus>
   readBridgeLogs(): Promise<BridgeLogSnapshot>
+  readConnectorLogs(query?: ConnectorLogQuery): Promise<ConnectorLogPage>
   inspect(): Promise<OnboardingSnapshot>
   /** Opens the Desktop app on its onboarding entry; no argument is accepted. */
   openDesktop(): Promise<DesktopLaunch>

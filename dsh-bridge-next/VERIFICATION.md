@@ -164,3 +164,13 @@ Connector 全量检查有 720 项通过、1 项旧参数签名约束失败；随
 迁移测试使用临时 SQLite，实际运行仍要求 PostgreSQL。重启现有 `local-up.sh`
 会自动应用 `v2_33`，然后需完全重启 DSH 以加载新的插件 Python 进程。本轮
 未启动或重启真实服务，也未宣称已完成原环境的 409 实测验收。
+
+## 2026-09-14：Connector 日志、环境依赖与远程审批
+
+- 插件依赖统一为 npm `next` 标签对应的 DSH `0.1.5-rc.2`。uv 使用现成的 `@dataiku/uv@0.12.0` 平台可选依赖，直接执行原生二进制，不依赖 postinstall。
+- `yarn typecheck`、`yarn build`、`yarn check:build` 通过。macOS arm64 上实际执行 npm uv 的 `--version` 通过；其他平台没有实机验证。
+- 全部 148 项测试在 `tsx --test --test-concurrency=4 tests/unit/*.test.ts tests/integration/*.test.ts` 下通过。日志测试包含退出码 2 的 stderr 留存、脱敏、10,000 行保留、200 行分页、重启与恢复出厂设置；审批测试使用官方 rc.2 服务，覆盖单次批准、拒绝、取消、多端作答、重连与计划审批。
+- 默认高并发全量测试曾在不同临时目录之间触发既有的本地端口锁碰撞：一次来自插件 manager 锁，一次来自 Python runtime owner 锁。降低测试并发后全量通过；目录哈希映射端口的实现仍可能误冲突，本次仅修复 Bridge 对残留 PID/损坏 endpoint 文件的误判。
+- Web 与 Desktop 前端未修改。插件自身新增日志来源切换和 Connector 终端日志列表；计划审批沿用现有 inputRequest v1 协议，未新增前端协议或专用页面。
+
+合入最新 main 时，两个 Python 集成探针已适配 Connector 访问令牌新增的 credential_hash 参数。重新构建及产物检查通过；并发 4 时再次出现既有端口锁竞争，随后以 --test-concurrency=1 运行全部 148 项测试通过（0 失败）。

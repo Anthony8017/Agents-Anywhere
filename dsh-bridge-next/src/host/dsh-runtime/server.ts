@@ -16,11 +16,6 @@ async function endpointAt(path: string): Promise<Record<string, unknown> | undef
   catch (error) { if (record(error).code === 'ENOENT') return undefined; throw error }
 }
 
-function processExists(pid: unknown): boolean {
-  if (typeof pid !== 'number' || !Number.isSafeInteger(pid) || pid < 1) return false
-  try { process.kill(pid, 0); return true } catch (error) { return record(error).code !== 'ESRCH' }
-}
-
 /** Private loopback transport. Discovery probes can coexist with a Connector connection. */
 export class RuntimeServer {
   private server: Server | undefined
@@ -73,11 +68,8 @@ export class RuntimeServer {
     const endpoint: Endpoint = { version: 1, host: '127.0.0.1', port: address.port, token, pid: process.pid }
     try {
       await mkdir(dirname(this.endpointPath), { recursive: true, mode: 0o700 })
-      const existing = await endpointAt(this.endpointPath)
-      if (existing) {
-        if (processExists(existing.pid)) throw new Error('Another DSH bridge owns this DSH_HOME endpoint')
-        await unlink(this.endpointPath)
-      }
+      // The acquired OS lease is authoritative; descriptors can survive crashes or Host reloads.
+      await unlink(this.endpointPath).catch(error => { if (record(error).code !== 'ENOENT') throw error })
       // Link publishes a complete file atomically and refuses to overwrite a competing owner.
       const temporary = `${this.endpointPath}.${token}.tmp`
       try {
@@ -187,10 +179,10 @@ export class RuntimeServer {
           clearTimeout(authTimer)
           this.diagnostics.log('info', 'bridge.initialized', { connectionId, syncMode: this.reader.native ? 'events' : 'polling' })
           send({ jsonrpc: '2.0', id, result: {
-            identity: { runtime: 'dsh', runtimeVersion: '0.1.2-rc.1', bridgeVersion: '0.1.0-dev.0', protocolVersion: '1.0', displayName: 'DeepSeek Harness' },
+            identity: { runtime: 'dsh', runtimeVersion: '0.1.5-rc.2', bridgeVersion: '0.1.0-dev.0', protocolVersion: '1.0', displayName: 'DeepSeek Harness' },
             storage: { mode: 'dsh-native', sameSessionWriterLimit: 1, crossProcessWriterExclusion: false },
             features: { attachments: Boolean(this.reader.native?.ctx.get('sessionController') && this.reader.native.ctx.get('attachments')),
-              sessionDiscovery: true, timelineSuffixRead: false, approval: false, userQuestions: this.reader.native?.questions.available ?? false,
+              sessionDiscovery: true, timelineSuffixRead: false, approval: this.reader.native?.approvals.available ?? false, userQuestions: this.reader.native?.questions.available ?? false,
               readOnly: !this.reader.native?.ctx.get('sessionController'), snapshotPagination: true, syncMode: this.reader.native ? 'events' : 'polling', projectionVersion: 2 },
           } })
           return

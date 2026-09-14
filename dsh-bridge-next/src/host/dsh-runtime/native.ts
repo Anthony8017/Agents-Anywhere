@@ -12,6 +12,7 @@ import { BridgeError } from './errors.js'
 import { ClientPresence } from './visibility.js'
 import { NativeSessionSource } from './sessions/source.js'
 import { record } from './types.js'
+import { UserApprovals } from './approvals.js'
 import { UserQuestions } from './questions.js'
 import { RuntimeDiagnostics } from './diagnostics.js'
 import { RuntimeCatalogs } from './catalogs.js'
@@ -28,7 +29,7 @@ export type NativeChange = { type: 'stream', id: string, turn: number, step: num
   | { type: 'event', id: string, event: SessionEvent }
   | { type: 'session', id: string } | { type: 'status', id: string }
   | { type: 'refresh', id: string }
-  | { type: 'question', id: string } | { type: 'capabilities' }
+  | { type: 'question', id: string } | { type: 'approval', id: string } | { type: 'capabilities' }
   | { type: 'visibility' } | { type: 'catalogs' }
 export interface NativeWorkspace { id: string, title: string, path: string, sessionIds: string[] }
 
@@ -48,6 +49,7 @@ export function lastTurnEndKind(events: readonly SessionEvent[]): string | undef
 export class NativeRuntime {
   readonly presence: ClientPresence
   readonly questions: UserQuestions
+  readonly approvals: UserApprovals
   private listeners = new Set<(change: NativeChange) => void>()
   readonly source: NativeSessionSource
   readonly catalogs: RuntimeCatalogs
@@ -80,6 +82,7 @@ export class NativeRuntime {
     }
     this.presence = new ClientPresence(() => {})
     this.source = new NativeSessionSource(ctx, diagnostics)
+    this.approvals = new UserApprovals(ctx, id => this.visible(id), id => this.emit(id ? { type: 'approval', id } : { type: 'capabilities' }))
     this.questions = new UserQuestions(ctx, id => this.visible(id), id => this.emit(id ? { type: 'question', id } : { type: 'capabilities' }))
     ctx.on('session/created', session => {
       this.source.observe(session)
@@ -88,6 +91,7 @@ export class NativeRuntime {
     ctx.on('session/event', (session, event) => {
       this.source.observe(session, event)
       this.questions.observe(session.id, event)
+      this.approvals.observe(session.id, event)
       this.emit({ type: 'event', id: session.id, event })
     }, { global: true })
     ctx.on('session/disposed', session => this.emit({ type: 'session', id: session.id }), { global: true })
@@ -149,7 +153,7 @@ export class NativeRuntime {
     // model. Each model's reasoningItems describes its own effort support.
     const effort = Boolean(catalog?.models.some(item => item.enabled && item.reasoningItems.some(option => option.enabled)))
     const result = capabilities(platformId, Boolean(this.ctx.get('sessionController')), this.questions.available,
-      { model, effort, attachments: Boolean(this.ctx.get('attachments')), files: Boolean(this.ctx.get('fileUploads')),
+      { model, effort, approval: this.approvals.available, attachments: Boolean(this.ctx.get('attachments')), files: Boolean(this.ctx.get('fileUploads')),
         permission: this.configuration.canSelectPermission && (!id || !this.ctx.get('agents')?.get(id) || Boolean(this.ctx.get('commands')!.find(this.ctx.get('agents')!.get(id)!, 'permission'))) })
     return { ...result, metadata: { ...result.metadata,
       ...(catalog ? { modelCatalogFailures: catalog.metadata.failures } : {}) } }
@@ -320,6 +324,7 @@ export class NativeRuntime {
     this.presence.close()
     this.source.close()
     await this.questions.close()
+    await this.approvals.close()
     this.listeners.clear()
     await Promise.allSettled([...this.writes.values()])
     this.facts.clear()
