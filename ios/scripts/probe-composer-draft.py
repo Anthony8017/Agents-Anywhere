@@ -80,6 +80,9 @@ def main():
             value = json.loads(result.read_text())
             assert "error" not in value, value
             assert value["markedUpdates"] == 120 and value["draftMatchesEditor"] and value["attachmentCallback"], value
+            assert value["counts"]["persistence"] == 120, value
+            page_updates = value["counts"].get("page", 0)
+            assert page_updates >= 100 if baseline else page_updates < 10, value
             (args.output / f"{index + 1}-{'baseline' if baseline else 'fixed'}.json").write_text(json.dumps(value, indent=2) + "\n")
             print(json.dumps(value), flush=True)
     finally:
