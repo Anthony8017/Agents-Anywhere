@@ -18,4 +18,30 @@ The new node permits up to 80 PostgreSQL connections (8 times a 5+5 pool), bring
 the three application nodes to at most 140 against the previously recorded 300
 server limit. Validate current database capacity and readiness before handoff.
 
-Deployment status: prepared; runtime validation pending.
+Deployment verified on 2026-09-15 at 12:00-12:02 Asia/Shanghai:
+
+- Image ID matches the running worker-1 image exactly.
+- Container healthy, zero restarts, and all eight distinct worker instance IDs
+  returned ready with PostgreSQL schema 2.35 and Redis OK.
+- Public HTTPS homepage and readiness both returned HTTP 200; readiness identified
+  worker 3. Workers 1 and 2 ingress independently returned HTTP 200.
+- Confirmed Docker limit: 8 CPUs, 12 GiB memory, loopback port 8000.
+- Initial traffic snapshot: 124.58% Docker CPU (about 1.25 cores), 1.339 GiB memory.
+  This is a point-in-time observation, not a benchmark.
+
+During preparation, public DNS already resolved to worker 3 before the application
+was started. Its OpenResty logs showed upstream connection refused on port 8000,
+causing public 502 responses. Starting the worker restored the public checks.
+No DNS, ingress, or existing application-node configuration was changed.
+
+Remote deployment directory:
+/root/code/github/Agents-Anywhere-releases/c4be624b/docker/cluster-a
+
+Run from that directory:
+
+```sh
+docker compose -f compose.yml -f compose.worker-3.yml ps
+docker compose -f compose.yml -f compose.worker-3.yml logs --tail 100 server
+docker stats agents-anywhere-cluster-a-server-1
+```
+
