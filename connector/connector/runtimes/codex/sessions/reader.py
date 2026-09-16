@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import time
+import hashlib
+import json
 from collections.abc import Awaitable, Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -233,15 +235,34 @@ class CodexSessionReader:
             session_id=session_id,
             external_session_id=external_session_id,
         )
+        checkpoint_key = f"codex/timeline-sync/{external_session_id}"
+        previous = await self.host.sync_state_read(checkpoint_key) if external_session_id else None
+        # Version changes deliberately invalidate projections from older implementations.
+        old_items = previous.get("items") if isinstance(previous, Mapping) and previous.get("version") == 1 and previous.get("sessionId") == session_id else None
+        valid = isinstance(old_items, dict) and all(isinstance(k, str) and isinstance(v, str) for k, v in old_items.items())
+        items = tuple(item for item in snapshot.items if item.type not in {"turn.start", "turn.end"})
+        fingerprints = {
+            item.id: hashlib.sha256(json.dumps(asdict(item), sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+            for item in items
+        }
+        removed = valid and bool(old_items.keys() - fingerprints.keys())
+        replacement = previous is not None and (not valid or removed)
+        delta = items if not valid or replacement else tuple(item for item in items if old_items.get(item.id) != fingerprints[item.id])
+        prepared_snapshot = replace(snapshot, items=delta, complete=bool(replacement)) if delta or replacement else None
+        # Capture this scan's marker now: a concurrent inventory must not be
+        # acknowledged by an older snapshot's commit callback.
+        pending = self._pending_sync_states.get(session_id)
 
         async def commit() -> None:
-            pending = self._pending_sync_states.pop(session_id, None)
-            if pending is None:
-                return
-            sync_key, sync_state = pending
-            await self.host.sync_state_write(sync_key, sync_state)
+            if external_session_id:
+                await self.host.sync_state_write(checkpoint_key, {"version": 1, "sessionId": session_id, "items": fingerprints})
+            if pending is not None:
+                sync_key, sync_state = pending
+                await self.host.sync_state_write(sync_key, sync_state)
+                if self._pending_sync_states.get(session_id) is pending:
+                    self._pending_sync_states.pop(session_id, None)
 
-        return PreparedSessionTimelineSync(snapshot=snapshot, commit=commit)
+        return PreparedSessionTimelineSync(snapshot=prepared_snapshot, commit=commit)
 
     async def get_session_state(
         self,

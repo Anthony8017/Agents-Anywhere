@@ -155,10 +155,12 @@ class RuntimeSyncRunner:
                                 **dict(session.metadata),
                                 "sync": {"changed": True, "requires_timeline_sync": True},
                             })
-                        await self.sync_existing_session(
+                        completed = await self.sync_existing_session(
                             runtime, session, source_in_inventory=inventory_scan_token is not None,
                             recovering=recover,
                         )
+                        if completed is False:
+                            failed = True
                     except ConnectorNetworkError as exc:
                         logger.warning(
                             "existing session sync network failure runtime={} session_id={} external_session_id={} error={}",
@@ -239,7 +241,7 @@ class RuntimeSyncRunner:
         *,
         source_in_inventory: bool = False,
         recovering: bool = False,
-    ) -> None:
+    ) -> bool | None:
         """Publish one discovered session and any required fresh timeline.
 
         Side effects:
@@ -331,6 +333,7 @@ class RuntimeSyncRunner:
                 snapshot.complete,
                 read_elapsed_ms,
             )
+        deferred_replacement = recovering and active and snapshot is not None and snapshot.complete
         if recovering and active and snapshot is not None:
             snapshot = replace(snapshot, complete=False)
         notices = await runtime.get_session_notices(
@@ -351,7 +354,7 @@ class RuntimeSyncRunner:
         publish_started_at = time.monotonic()
         await self._ingest_scanner_notifications(notifications)
         publish_elapsed_ms = (time.monotonic() - publish_started_at) * 1000
-        if prepared is not None and prepared.commit is not None:
+        if prepared is not None and prepared.commit is not None and not deferred_replacement:
             await prepared.commit()
         if publish_elapsed_ms >= 250 or synced_items >= 100:
             logger.info(
@@ -370,6 +373,9 @@ class RuntimeSyncRunner:
             read_elapsed_ms,
             publish_elapsed_ms,
         )
+        # Keep this recovery generation pending until deletion reconciliation is
+        # safe; otherwise an unchanged inventory marker could suppress its retry.
+        return not deferred_replacement
 
     async def _ingest_scanner_notifications(
         self,

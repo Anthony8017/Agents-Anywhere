@@ -182,21 +182,30 @@ export class SyncFeed {
     }
     const platformId = sessionId(this.namespace, id)
     const projection = createProjection(id, platformId, this.durableCheckpoints)
+    let resumed = false
+    if (restore && this.durableCheckpoints) {
+      await this.send([{ kind: 'checkpoint.load', externalSessionId: id }])
+      const checkpoint = record(this.receivedCheckpoint)
+      if (Number.isSafeInteger(checkpoint.throughSeq) && Number(checkpoint.throughSeq) >= -1) {
+        await replayHistory(projection, log, this.abort.signal, Number(checkpoint.throughSeq))
+        resumed = matchesCheckpoint(checkpoint, projection)
+        if (resumed) projection.drain()
+      }
+    }
     await replayHistory(projection, log, this.abort.signal)
     const title = log.events.findLast(event => event.type === 'session/title')
     const meta = { externalSessionId: id, title: title?.type === 'session/title' ? title.data.title : null,
       sourceState: await this.native.source.state(id), cwd: log.session.cwd ?? null,
       lastActivityAt: new Date(log.events.at(-1)?.time ?? log.session.createdAt).toISOString() }
-    if (restore && this.durableCheckpoints) {
-      // Query one session at a time: neither subscription frames nor Connector
-      // state need an unbounded manifest of all session checkpoints.
-      await this.send([{ kind: 'checkpoint.load', externalSessionId: id }])
-      if (matchesCheckpoint(this.receivedCheckpoint, projection) && await this.native.visible(id)) {
-        projection.drain()
+    if (resumed) {
+      const delta = projection.drain()
+      if (!delta.removed.length && await this.native.visible(id)) {
         this.projections.set(id, projection)
         this.published.set(id, platformId)
         this.sourceAvailability.set(id, 'available')
         await this.notification('session.meta.upsert', { sessionId: platformId, ...meta })
+        await this.items('timeline.upsert', id, delta.items)
+        this.checkpointDirty.add(id)
         await this.notices(id)
         await this.state(id, log)
         this.native.diagnostics.log('info', 'sync.checkpoint_restored', { streamId: this.id, sessionId: id })

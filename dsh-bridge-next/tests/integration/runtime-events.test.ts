@@ -444,6 +444,13 @@ test('official native loop crosses Python and backend despite corrupt history, i
           session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'first native user message' }] }), { surfaceOp: 'append' })
           session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
           await fixture.ctx.sessions.flush(session)
+        } else if (action.action === 'host-restart') {
+          await fixture.plugin.dispose()
+          const host = await import('../../lib/index.js')
+          fixture.plugin = fixture.ctx.plugin(host, { dshHome: home, stateRoot: join(home, 'account'), connectorSourceDir: home })
+          await fixture.plugin.await()
+        } else if (action.action === 'offline-message') {
+          fixture.session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'offline recovery message' }] }), { surfaceOp: 'append' })
         } else if (action.action === 'rename') await workspace.setTitle('DSH 项目改名')
         else if (action.action === 'archive') await fixture.ctx.workspaceRegistry.archiveSession(SessionId(action.sessionId))
         else if (action.action === 'delete') await fixture.ctx.workspaceRegistry.delete(workspace.id)
@@ -458,11 +465,12 @@ test('official native loop crosses Python and backend despite corrupt history, i
       cwd: new URL('../../../server/', import.meta.url), timeout: 60_000,
     })
     assert.match(result.stdout, /DSH event pipeline passed/)
+    assert.match(result.stdout, /offline change=1 delta, 0 snapshots/)
   } finally { closed = true; adapter.release?.(); await mutations; await fixture.ctx.fiber.dispose(); await rm(home, { recursive: true, force: true }) }
 })
 
 
-test('a replacement feed uses Connector checkpoints and snapshots only offline changes', { timeout: 30_000 }, async () => {
+test('a replacement feed uses Connector checkpoints and uploads only offline deltas', { timeout: 30_000 }, async () => {
   const home = await mkdtemp(join(tmpdir(), 'dsh-checkpoints-'))
   const fixture = await nativeRuntime(home)
   const native = fixture.ctx.agentsAnywhereRuntime.native
@@ -477,21 +485,29 @@ test('a replacement feed uses Connector checkpoints and snapshots only offline c
     assert.equal(stream.ops().filter(op => op.kind === 'snapshot.begin').length, 0)
     stream.feed.close()
     fixture.session.append('session/title', { title: 'changed offline', source: { kind: 'user' }, messageSeqs: [] })
+    fixture.session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'offline delta' }] }), { surfaceOp: 'append' })
     stream = follow(native, checkpoints)
     await until(() => notifications(stream.ops()).some(n => n.method === 'session.inventory.complete'), 'changed reconnect')
-    assert.deepEqual(stream.ops().filter(op => op.kind === 'snapshot.commit').map(op => op.sessionId), [sessionId('test', 'native-main')])
+    assert.equal(stream.ops().filter(op => op.kind === 'snapshot.begin').length, 0)
+    const delta = notifications(stream.ops()).filter(n => n.method === 'timeline.itemUpsert')
+    assert.equal(delta.length, 1)
+    assert.ok(JSON.stringify(delta[0]).includes('offline delta'))
     assert.deepEqual(stream.errors, [])
     stream.feed.close()
     // Destroy the plugin Host (including its source caches and projections).
     // Only the Connector-owned, JSON-serializable checkpoints survive.
     const saved = JSON.stringify([...checkpoints])
     await fixture.plugin.dispose()
+    fixture.session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'changed while Host destroyed' }] }), { surfaceOp: 'append' })
     const host = await import('../../lib/index.js')
     await fixture.ctx.plugin(host, { dshHome: home, stateRoot: join(home, 'account'), connectorSourceDir: home }).await()
     const restored = new Map<string, unknown>(JSON.parse(saved))
     stream = follow(fixture.ctx.agentsAnywhereRuntime.native, restored)
     await until(() => notifications(stream.ops()).some(n => n.method === 'session.inventory.complete'), 'new Host restores Connector checkpoints')
     assert.equal(stream.ops().filter(op => op.kind === 'snapshot.begin').length, 0)
+    const restartDelta = notifications(stream.ops()).filter(n => n.method === 'timeline.itemUpsert')
+    assert.equal(restartDelta.length, 1)
+    assert.ok(JSON.stringify(restartDelta[0]).includes('changed while Host destroyed'))
     fixture.session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'incremental after Host restart' }] }), { surfaceOp: 'append' })
     await until(() => notifications(stream.ops()).some(n => n.method === 'timeline.itemUpsert' && JSON.stringify(n).includes('incremental after Host restart')), 'restored projection handles the next event incrementally')
     assert.equal(stream.ops().filter(op => op.kind === 'snapshot.begin').length, 0)

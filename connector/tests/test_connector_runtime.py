@@ -3476,3 +3476,44 @@ def test_reconnect_recovers_an_unchanged_polling_session_once():
         assert len(batches) == recovered
 
     asyncio.run(run())
+
+
+def test_active_recovery_does_not_commit_a_deferred_timeline_replacement():
+    from unittest.mock import AsyncMock
+
+    async def run():
+        commit = AsyncMock()
+        class Runtime(FakeAgentRuntime):
+            active = True
+
+            async def list_sessions(self, **kwargs):
+                return (SessionMeta(session_id="session", external_session_id="external", runtime="codex",
+                                    metadata={"sync": {"changed": False}}),)
+
+            async def get_session_state(self, *args):
+                return SessionState(session_id="session", external_session_id="external", runtime="codex", status="running" if self.active else "idle")
+
+            async def prepare_session_timeline_sync(self, *args):
+                return PreparedSessionTimelineSync(
+                    snapshot=RuntimeTimelineSnapshot(session_id="session", external_session_id="external",
+                                                     runtime="codex", items=(), complete=True), commit=commit)
+
+        runtime = Runtime()
+        ingest = AsyncMock()
+        runner = RuntimeSyncRunner(config=_client().config, supervisor=FakeRuntimeSupervisor(runtime),
+            host=RecordingRuntimeHost(), preferences_reader=dict,
+            send_notification=unused_notification_sender, ingest_notifications=ingest)
+        await runner.sync_existing_session(runtime, SessionMeta(session_id="session", external_session_id="external",
+            runtime="codex", metadata={"sync": {"changed": True, "requires_timeline_sync": True}}), recovering=True)
+        commit.assert_not_awaited()
+        notices = ingest.call_args.args[0]
+        assert next(n for n in notices if n["method"] == "timeline.sync")["params"]["complete"] is False
+        await runner.reconnect_event_runtimes()
+        await runner.sync_existing_once()
+        commit.assert_not_awaited()
+        assert runner._recovered.get("codex", 0) != runner._recovery_generation
+        runtime.active = False
+        await runner.sync_existing_once()
+        commit.assert_awaited_once()
+        assert runner._recovered["codex"] == runner._recovery_generation
+    asyncio.run(run())

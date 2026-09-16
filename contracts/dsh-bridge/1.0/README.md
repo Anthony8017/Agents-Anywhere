@@ -139,10 +139,13 @@ Checkpoint fields are `version:1`, `projectionVersion:2`, `throughSeq`,
 `historyHash` (SHA-256 of durable native events and attachment receipts, seeded
 with native/platform identity), and `settled`. The Host locally replays history
 and compares this fingerprint, independent of live/persisted SDK revision formats.
-Unchanged settled sessions upload no history and retain their reconstructed
-projection for the next live event. Changed, active, missing or incompatible
-checkpoints fall back to a complete snapshot of that session. This is recovery
-incremental **by session**, not suffix-only native-event recovery. Metadata,
+The Host first replays through the checkpoint cursor and validates its fingerprint
+and settled boundary. It drains that prefix, applies the remaining events and
+uploads only resulting new/modified Timeline items. Unchanged sessions upload no
+history. The reconstructed projection also handles the next live event directly.
+Missing/incompatible checkpoints, a changed or truncated prefix, an unsettled
+checkpoint, or item deletions fall back to a complete snapshot of that session.
+Local history is still read/replayed; incremental recovery limits network uploads. Metadata,
 current state, pending notices and the full source inventory are still reconciled.
 
 Relay failures replace only the sync subscription on the existing RPC connection;

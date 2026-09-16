@@ -264,7 +264,8 @@ export function projectHistory(snapshot: AttachmentSnapshot, platformId: string)
 }
 
 /** Bound replay slices so timers, control RPC and cancellation can run between them. */
-export async function replayHistory(projection: SessionProjection, snapshot: AttachmentSnapshot, signal?: AbortSignal): Promise<void> {
+export async function replayHistory(projection: SessionProjection, snapshot: AttachmentSnapshot, signal?: AbortSignal,
+  throughSeq = Infinity): Promise<void> {
   let deadline = performance.now() + 5
   for (let index = 0; index < snapshot.events.length; index++) {
     if (index % 128 === 0 && performance.now() >= deadline) {
@@ -273,6 +274,7 @@ export async function replayHistory(projection: SessionProjection, snapshot: Att
     }
     signal?.throwIfAborted()
     const event = snapshot.events[index]!
+    if (Number(event.seq) > throughSeq) break
     projection.apply(event, snapshot.attachmentReceipts?.[receiptKey(event) ?? ''])
   }
 }
