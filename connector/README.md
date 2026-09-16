@@ -78,8 +78,24 @@ selected by that runtime's normal keys. A failed migration blocks that runtime's
 startup and can be retried. Agent-native histories and the machine ownership record
 are not relocated.
 
-Codex recovery still reads the full native timeline, but compares each projected
-item with its last successfully ingested fingerprint in `sync-state.json`.
+Codex recovery uses an optional read-only native history index to avoid loading
+unchanged message bodies. For standalone paginated histories, it verifies that
+`thread_history_1.sqlite` has consumed the current rollout, then compares every
+turn's metadata and item update ordinals with its committed checkpoint. Unchanged,
+settled history needs no history RPC after restart. New turns normally require one
+20-turn page; the previous tail is rechecked. Changes to older turns read back to
+the earliest changed turn. Prefix item counts preserve timeline ordering.
+
+The index is an optimization, not another data owner: it is opened read-only and
+never repaired or migrated by AA. Unknown schemas, lagging projections, inherited
+histories, compaction, missing sources or invalid checkpoints use the full history
+RPC. Deletion, reordering and source replacement require full calibration. Changes
+during a paginated read abort the checkpoint commit and retry on the next scan.
+Native file identity, size and nanosecond mtime supplement the API's second-resolution
+change marker. Index validation and checkpoint metadata still scale with history
+size, but unchanged message bodies are neither fetched nor projected.
+
+Each projected item is compared with its last successfully ingested fingerprint in `sync-state.json`.
 Unchanged items are omitted, including after reconnect/restart; new and modified
 items are sent as a delta. First sync sends all items. Item removals or incompatible
 checkpoint versions use a session replacement snapshot. Replacement is deferred
@@ -87,6 +103,10 @@ while a session is active, without committing its checkpoint. Failed ingestion
 never advances the prepared fingerprint state. Live notifications do not advance
 this scanner checkpoint, so the latest live items can be safely resent once by
 the next successful scan. Fingerprints scale with the number of timeline items.
+Recovery progress is tracked per session, so one failing session does not force
+all successful sessions to reread their history on every poll. Codex's active-writer
+conflict is reported as a takeover failure before sending the message; AA cannot
+silently displace another native client holding the writer lock.
 
 ## Local startup ownership
 

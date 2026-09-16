@@ -3478,6 +3478,50 @@ def test_reconnect_recovers_an_unchanged_polling_session_once():
     asyncio.run(run())
 
 
+def test_failed_session_does_not_repeat_successful_recovery_but_changes_still_sync():
+    from collections import Counter
+    from unittest.mock import AsyncMock
+
+    async def run():
+        reads = Counter()
+        class Runtime(FakeAgentRuntime):
+            changed = False
+            broken = True
+
+            async def list_sessions(self, **kwargs):
+                assert kwargs["force"] is False
+                return tuple(SessionMeta(session_id=id, external_session_id=id, runtime="codex",
+                    metadata={"sync": {"changed": self.changed and id == "healthy", "requires_timeline_sync": self.changed and id == "healthy"}})
+                    for id in ["healthy", "broken"])
+
+            async def prepare_session_timeline_sync(self, id, external):
+                reads[id] += 1
+                if id == "broken" and self.broken:
+                    raise RuntimeError("invalid paginated history lineage: cycle detected")
+                return PreparedSessionTimelineSync(snapshot=None, commit=AsyncMock())
+
+        runtime = Runtime()
+        runner = RuntimeSyncRunner(config=_client().config, supervisor=FakeRuntimeSupervisor(runtime),
+            host=RecordingRuntimeHost(), preferences_reader=dict,
+            send_notification=unused_notification_sender, ingest_notifications=AsyncMock())
+        await runner.reconnect_event_runtimes()
+        await runner.sync_existing_once()
+        await runner.sync_existing_once()
+        assert reads == {"healthy": 1, "broken": 2}
+        runtime.changed = True
+        await runner.sync_existing_once()
+        assert reads == {"healthy": 2, "broken": 3}
+        runtime.changed = False
+        runtime.broken = False
+        await runner.sync_existing_once()
+        await runner.sync_existing_once()
+        assert reads == {"healthy": 2, "broken": 4}
+        await runner.reconnect_event_runtimes()
+        await runner.sync_existing_once()
+        assert reads == {"healthy": 3, "broken": 5}
+    asyncio.run(run())
+
+
 def test_active_recovery_does_not_commit_a_deferred_timeline_replacement():
     from unittest.mock import AsyncMock
 
