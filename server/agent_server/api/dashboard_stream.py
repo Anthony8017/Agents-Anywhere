@@ -113,7 +113,7 @@ async def dashboard_ws(
 
     await websocket.accept()
     queue = await broker.register_dashboard(ticket.user_id)
-    recovery_signal = broker.connection_lost
+    recovery_signal = broker.recovery_signal
 
     async def send_dashboard_updates() -> None:
         await websocket.send_json(

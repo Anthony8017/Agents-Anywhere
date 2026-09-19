@@ -1060,7 +1060,7 @@ async def session_ws(
 
     await websocket.accept()
     queue = await broker.register(session_id)
-    recovery_signal = broker.connection_lost
+    recovery_signal = broker.recovery_signal
 
     async def send_session_updates() -> None:
         # Durable-writer and aggregate invalidations can overlap. Their

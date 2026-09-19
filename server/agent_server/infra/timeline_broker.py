@@ -90,6 +90,10 @@ class TimelineBroker:
         )
 
     @property
+    def recovery_signal(self) -> asyncio.Event | None:
+        return self.connection_lost if self._coordinator.distributed else None
+
+    @property
     def healthy(self) -> bool:
         return not self._coordinator.distributed or (
             self._subscription_ready

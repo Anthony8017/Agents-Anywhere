@@ -89,6 +89,7 @@ async def run_server_push_until_disconnect(
             return
 
         if recovery_task is not None and recovery_task in completed:
+            recovery_task.result()
             cancel_websocket_task(outbound_task)
             cancel_websocket_task(disconnect_task)
             await websocket.close(code=1012, reason="realtime interrupted; reconnect to recover")
