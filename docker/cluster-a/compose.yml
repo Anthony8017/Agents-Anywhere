@@ -16,7 +16,7 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     stop_grace_period: 60s
-    mem_limit: 12g
+    mem_limit: 14g
     cpus: 3.5
     logging:
       driver: json-file
