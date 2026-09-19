@@ -16,7 +16,7 @@ total (5 persistent + 5 overflow per process), leaving room under the configured
 300-connection server limit. Redis requires AOF with appendfsync everysec and
 maxmemory-policy noeviction because it buffers accepted Timeline writes.
 
-Build one image from a committed release and distribute that exact image to both
+Build one image from a committed release and distribute that exact image to all
 workers. Release archives live under /root/code/github/Agents-Anywhere-releases/<release> on each node.
 Copy .env.example to .env, fill credentials, and chmod 600 .env. Never commit it.
 Run commands in this directory:
