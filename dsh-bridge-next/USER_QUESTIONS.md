@@ -1,16 +1,16 @@
-# DSH 用户问答
+# DSH 用户问答与审批
 
-已接入 DSH `0.1.2-rc.1` 的 `ask_user_question`。只转换 DSH 的问题和答案，沿用平台既有 `inputRequest` v1、notice、接管权限和回应接口。后端、平台 RuntimeProtocol、Web、Desktop、Android、iOS 均不需要改动。
+插件适配最新版 DSH，已接入 `ask_user_question`、`plan-review` 计划审批与 `approval/request` 工具权限审批。当前开发依赖与自动化检查使用 DSH SDK `0.1.5-rc.2`。交互沿用平台既有 `inputRequest` v1、notice、接管权限和回应接口；不同端的展示与操作受其已有交互能力约束。
 
 ## 流程与分工
 
 1. 官方工具调用 `ctx.userQuestions.ask()`，Agent 暂停等待。插件在 Host 内订阅官方 Typert Gateway 的 `$events`，接收 `user-questions/request`。它是普通事件消费者，不覆盖官方问答服务或替换官方 UI 的回答者。
-2. 插件过滤不可见会话和 `plan-review` 等不支持的意图。普通问答转换为平台 `interactionType: input_request` 的 notice。等待状态使用现有 `waiting_approval`。
+2. 插件过滤不可见会话，校验普通问答及 `plan-review` 的表单和选项。问答与计划审批转换为平台 `interactionType: input_request` 的 notice。等待状态使用现有 `waiting_approval`。
 3. DSH Connector 通过已有 `RuntimeHost.notice_upsert()` 发布问题，前端复用原来的问答组件。没有接管时仍遵守平台只读规则。
 4. 平台原有 `/sessions/{sessionId}/runtime/notices/{noticeId}/respond` 调用 `interaction.respond`。Python 仅转发到插件 `session.respondInteraction`，所有原生解释、校验和等待管理都在插件。
 5. 插件检查会话归属、问题是否仍等待、答案完整性，再使用官方 Connection 的公开进程内 Fetch carrier 向 Gateway `$events/result` 回答。这个 Fetch 不访问网络。官方工具收到答案后产生普通工具结果，Agent 继续执行，结果沿已有 Timeline 流同步。
 
-`question-stream.ts` 负责官方事件流及回应；`question-form.ts` 负责现有表单格式和答案校验；`questions.ts` 负责待回答状态和 notice。Python 的 `runtime.py` 和 `bridge/sync.py` 只做转发。
+`interaction-stream.ts` 负责官方事件流及回应；`question-form.ts` 负责现有表单格式和答案校验；`questions.ts` 负责待回答状态和 notice。Python 的 `runtime.py` 和 `bridge/sync.py` 只做转发。
 
 ## 既有表单规则
 
@@ -36,7 +36,13 @@
 - Gateway 暂不可用时问题保留，回应明确失败，可重新连接重试。原生轮次结束会清理仍未回答的旧问题。保留最多 128 个已关闭记录，用于前端当前状态核对，不写新数据库。
 - 问答/能力通知复用既有平台发布方法；只有插件与 Python 之间的私有批次白名单增加这两个已有通知名，平台协议及后端接口不变。Timeline 仍遵守已有 30 Hz 缓冲、顺序与 ACK。
 
-权限审批和 `exit_plan_mode` 本轮不接入，仍交给 DSH 原生界面。`session.interaction.approval` 是平台已有的通用交互门控能力，本次仅用它开放问答提交，不意味着已实现工具权限审批。
+## 计划审批与工具权限审批
+
+`plan-review` 复用问答表单，展示计划正文、DSH 提供的选项及自定义修改意见。批准选项根据 DSH 声明的标签匹配，不按选项位置猜测。原生客户端回答、取消和断线重连沿用同一个待处理请求。历史中的 `exit_plan_mode` 记录只作历史展示，不重新发起审批。
+
+工具权限审批由 `approvals.ts` 接收官方 `approval/request`，转换为平台交互通知，展示工具名和申请原因，并提供「允许一次」与「拒绝」。回应返回 DSH 的原待处理请求，不修改会话权限模式或批准策略。原生端处理或取消后，远端通知同步关闭；重复提交不会再次批准。
+
+问答与权限审批按对应官方服务的可用状态声明能力。`session.interaction.approval` 是平台通用交互门控，不能仅凭该能力名推断某一种原生交互一定可用。
 
 ## 验证与试用
 
