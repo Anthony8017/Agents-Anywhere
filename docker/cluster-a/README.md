@@ -3,12 +3,15 @@
 See MIGRATION.md and migration-state.json for the current production migration and
 application readiness state. deployed.json is the earlier alpha snapshot.
 
-Two identical Docker workers bind HTTP to 127.0.0.1:8000, including the static Web UI,
-API and WebSockets. Each runs three FastAPI processes, with the additional event process pool disabled. PostgreSQL and Redis run
-on 192.168.1.35 and accept LAN traffic only. Both workers must share their database,
+Three Docker workers bind HTTP to 127.0.0.1:8000, including the static Web UI,
+API and WebSockets. Workers 1 and 2 each run three FastAPI processes; worker 3
+runs eight using compose.worker-3.yml. Each application process has one extra
+event-preparation worker (14 across the cluster). All containers have a 14 GiB
+memory limit. PostgreSQL and Redis run on 192.168.1.35 and accept LAN traffic only.
+All workers must share their database,
 Redis, token secret and S3 configuration; instance IDs differ by node.
 
-The six application processes allow at most 60 pooled PostgreSQL connections in
+The fourteen application processes allow at most 140 pooled PostgreSQL connections in
 total (5 persistent + 5 overflow per process), leaving room under the configured
 300-connection server limit. Redis requires AOF with appendfsync everysec and
 maxmemory-policy noeviction because it buffers accepted Timeline writes.
