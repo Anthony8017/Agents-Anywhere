@@ -25,7 +25,7 @@ npm 包已包含插件构建产物和 Connector 源码，安装使用不需要�
 
 已安装 AA Desktop 时，插件的连接页面会引导打开 AA Desktop，运行日志仍可查看。旧版连接插件如仍在管理相同账号或设备，应先在 DSH 中停用。
 
-开发者可继续阅读下方的源码构建说明，以及 [Runtime 技术说明](./RUNTIME_READS.md)、[问答与审批](./USER_QUESTIONS.md)。开发计划和历史验证记录位于源代码仓库。
+开发者可继续阅读下方的源码构建说明，以及 [Runtime 技术说明](https://github.com/anywhere-labs/Agents-Anywhere/blob/39043f6a/dsh-bridge-next/RUNTIME_READS.md)、[问答与审批](https://github.com/anywhere-labs/Agents-Anywhere/blob/39043f6a/dsh-bridge-next/USER_QUESTIONS.md)。开发计划和历史验证记录位于源代码仓库。
 
 ## 已实现
 
