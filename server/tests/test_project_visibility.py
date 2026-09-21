@@ -104,6 +104,39 @@ def test_synced_project_is_not_manual_and_client_creation_claims_it(store):
     asyncio.run(scenario())
 
 
+def test_connector_import_reuses_explicit_project_without_creating_cwd_projects(store):
+    async def scenario():
+        imported = await store.upsert_connector_session(
+            connector_id="device",
+            session_id="imported-unknown",
+            runtime="codex",
+            external_session_id="thread-unknown",
+            cwd="/history/unknown",
+        )
+        assert imported.projectId is None
+        assert imported.cwd == "/history/unknown"
+        assert await store.list_projects(user_id="owner") == []
+
+        explicit = await store.create_project(
+            user_id="owner",
+            connector_id="device",
+            name="Repo",
+            workspace_path="/repo",
+        )
+        matched = await store.upsert_connector_session(
+            connector_id="device",
+            session_id="imported-known",
+            runtime="codex",
+            external_session_id="thread-known",
+            cwd="/repo/./",
+        )
+        assert matched.projectId == explicit.id
+        assert matched.cwd == "/repo"
+        assert len(await store.list_projects(user_id="owner")) == 1
+
+    asyncio.run(scenario())
+
+
 def test_concurrent_workspace_resolution_reuses_one_project(store):
     async def scenario():
         resolved = await asyncio.gather(

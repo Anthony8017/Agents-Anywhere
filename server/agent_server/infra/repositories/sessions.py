@@ -446,11 +446,13 @@ class SessionRepositoryMixin:
                 )
             ).first()
             if existing is None:
-                project_id, normalized_cwd = await self._ensure_project_for_workspace(
+                # Connector imports carry a cwd, not a user-selected project.
+                # Reuse an existing explicit project when one matches, but do
+                # not create a project for every historical working directory.
+                project_id, normalized_cwd = await self._project_for_workspace(
                     conn,
                     connector_id=connector_id,
                     workspace_path=cwd,
-                    now=now,
                 )
                 await conn.execute(
                     insert(sessions_t).values(
@@ -515,11 +517,10 @@ class SessionRepositoryMixin:
                 if title is not None:
                     values["title"] = title
                 if cwd is not None or current.project_id is None:
-                    project_id, normalized_cwd = await self._ensure_project_for_workspace(
+                    project_id, normalized_cwd = await self._project_for_workspace(
                         conn,
                         connector_id=connector_id,
                         workspace_path=cwd or current.cwd,
-                        now=now,
                     )
                     values["project_id"] = project_id
                     values["cwd"] = normalized_cwd
@@ -1787,7 +1788,7 @@ class SessionRepositoryMixin:
             if row is None:
                 raise KeyError(session_id)
             if cwd is not None or row.project_id is None:
-                project_id, normalized_cwd = await self._ensure_project_for_workspace(
+                project_id, normalized_cwd = await self._project_for_workspace(
                     conn,
                     connector_id=row.connector_id,
                     workspace_path=cwd if cwd is not None else row.cwd,
