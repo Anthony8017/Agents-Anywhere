@@ -149,12 +149,15 @@ class ProjectRepositoryMixin:
         *,
         connector_id: str,
         workspace_path: str | None,
+        manual_only: bool = False,
     ) -> tuple[str | None, str]:
         """Resolve an existing project without creating one.
 
         Connector session imports must not turn every observed ``cwd`` into a
         project.  Keep path validation and lookup in the same transaction as
         the caller so an import can still reuse an explicitly created project.
+        Connector imports also pass ``manual_only`` so legacy automatic rows do
+        not keep attracting new sessions after the import fix.
         """
         connector = (
             (
@@ -181,14 +184,17 @@ class ProjectRepositoryMixin:
         cleaned_path, workspace_key = _clean_workspace_path(
             workspace_path.strip(), connector["device_os"]
         )
+        conditions = [
+            projects_t.c.user_id == connector["user_id"],
+            projects_t.c.connector_id == connector_id,
+            projects_t.c.workspace_key == workspace_key,
+        ]
+        if manual_only:
+            conditions.append(projects_t.c.manually_created == 1)
         existing = (
             await conn.execute(
                 select(projects_t.c.id)
-                .where(
-                    projects_t.c.user_id == connector["user_id"],
-                    projects_t.c.connector_id == connector_id,
-                    projects_t.c.workspace_key == workspace_key,
-                )
+                .where(*conditions)
                 .order_by(projects_t.c.created_at.asc(), projects_t.c.id.asc())
                 .limit(1)
             )

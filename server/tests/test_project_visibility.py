@@ -117,6 +117,20 @@ def test_connector_import_reuses_explicit_project_without_creating_cwd_projects(
         assert imported.cwd == "/history/unknown"
         assert await store.list_projects(user_id="owner") == []
 
+        automatic = await store.ensure_project_for_workspace(
+            connector_id="device",
+            workspace_path="/legacy",
+        )
+        legacy_import = await store.upsert_connector_session(
+            connector_id="device",
+            session_id="imported-legacy",
+            runtime="codex",
+            external_session_id="thread-legacy",
+            cwd="/legacy",
+        )
+        assert automatic.manuallyCreated is False
+        assert legacy_import.projectId is None
+
         explicit = await store.create_project(
             user_id="owner",
             connector_id="device",
@@ -132,7 +146,11 @@ def test_connector_import_reuses_explicit_project_without_creating_cwd_projects(
         )
         assert matched.projectId == explicit.id
         assert matched.cwd == "/repo"
-        assert len(await store.list_projects(user_id="owner")) == 1
+        projects = await store.list_projects(user_id="owner")
+        assert {project.id for project in projects} == {automatic.id, explicit.id}
+        assert [project.id for project in projects if project.manuallyCreated] == [
+            explicit.id
+        ]
 
     asyncio.run(scenario())
 

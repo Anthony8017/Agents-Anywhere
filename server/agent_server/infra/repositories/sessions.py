@@ -453,6 +453,7 @@ class SessionRepositoryMixin:
                     conn,
                     connector_id=connector_id,
                     workspace_path=cwd,
+                    manual_only=normalized_origin == "connector_import",
                 )
                 await conn.execute(
                     insert(sessions_t).values(
@@ -521,6 +522,7 @@ class SessionRepositoryMixin:
                         conn,
                         connector_id=connector_id,
                         workspace_path=cwd or current.cwd,
+                        manual_only=normalized_origin == "connector_import",
                     )
                     values["project_id"] = project_id
                     values["cwd"] = normalized_cwd
@@ -1792,6 +1794,7 @@ class SessionRepositoryMixin:
                     conn,
                     connector_id=row.connector_id,
                     workspace_path=cwd if cwd is not None else row.cwd,
+                    manual_only=True,
                 )
                 values["project_id"] = project_id
                 values["cwd"] = normalized_cwd
