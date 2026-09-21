@@ -180,7 +180,7 @@ export function FilesPanelBody({
   React.useEffect(() => {
     const token = tokenRef.current
     const requestId = ++loadRequestIdRef.current
-    const initialPath = isWindowsConnector ? "" : effectiveRoot
+    const initialPath = effectiveRoot
     setPath(initialPath)
     setCurrentPath(initialPath)
     setEntries([])
